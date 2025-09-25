@@ -338,14 +338,30 @@ window.DevMentorHelpers = {
    */
   async checkAIAvailability() {
     try {
-      return 'ai' in window && 
-             'prompt' in window.ai && 
-             'writer' in window.ai &&
-             'proofreader' in window.ai &&
-             'rewriter' in window.ai;
+      // Check if we have API key configured
+      const result = await chrome.storage.sync.get(['aiApiKey', 'aiProvider']);
+      const hasApiKey = !!result.aiApiKey;
+      const provider = result.aiProvider || 'openai';
+      
+      if (!hasApiKey) {
+        return { available: false, reason: 'No API key configured' };
+      }
+      
+      // Test connection to the configured provider
+      const codeAnalyzer = window.CodeAnalyzer;
+      if (codeAnalyzer) {
+        const testResult = await codeAnalyzer.testConnection();
+        return {
+          available: testResult.success,
+          provider: provider,
+          reason: testResult.success ? 'Connected' : testResult.error
+        };
+      }
+      
+      return { available: false, reason: 'CodeAnalyzer not initialized' };
     } catch (error) {
       console.error('AI availability check failed:', error);
-      return false;
+      return { available: false, reason: error.message };
     }
   },
 

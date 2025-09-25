@@ -409,6 +409,31 @@
 
                 <div class="setting-item">
                     <div class="setting-info">
+                        <div class="setting-label">AI Provider</div>
+                        <div class="setting-description">Choose your AI service provider</div>
+                    </div>
+                    <div class="setting-control">
+                        <select class="select-dropdown" data-setting="aiProvider">
+                            <option value="openai">OpenAI (GPT-4)</option>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="claude">Anthropic Claude</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-label">API Key</div>
+                        <div class="setting-description">Your AI service API key (stored locally)</div>
+                    </div>
+                    <div class="setting-control">
+                        <input type="password" class="select-dropdown" id="apiKeyInput" placeholder="Enter your API key...">
+                        <button class="btn btn-secondary" id="testConnection">Test</button>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
                         <div class="setting-label">Auto-Analysis</div>
                         <div class="setting-description">Automatically analyze selected code without manual trigger</div>
                     </div>
@@ -827,7 +852,127 @@
         // Initialize settings manager when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             new SettingsManager();
+            new APIManager();
         });
+
+        // API Key Management
+        class APIManager {
+            constructor() {
+                this.apiKeyInput = document.getElementById('apiKeyInput');
+                this.testButton = document.getElementById('testConnection');
+                this.setupEventListeners();
+                this.loadCurrentSettings();
+            }
+
+            setupEventListeners() {
+                this.testButton.addEventListener('click', () => this.testConnection());
+                this.apiKeyInput.addEventListener('input', () => this.saveApiKey());
+                
+                // Auto-save API key when typing
+                let saveTimeout;
+                this.apiKeyInput.addEventListener('input', () => {
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => this.saveApiKey(), 1000);
+                });
+            }
+
+            async loadCurrentSettings() {
+                try {
+                    const result = await chrome.storage.sync.get(['aiApiKey', 'aiProvider']);
+                    if (result.aiApiKey) {
+                        this.apiKeyInput.value = result.aiApiKey;
+                    }
+                    if (result.aiProvider) {
+                        const providerSelect = document.querySelector('[data-setting="aiProvider"]');
+                        if (providerSelect) {
+                            providerSelect.value = result.aiProvider;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading API settings:', error);
+                }
+            }
+
+            async saveApiKey() {
+                try {
+                    const apiKey = this.apiKeyInput.value.trim();
+                    const providerSelect = document.querySelector('[data-setting="aiProvider"]');
+                    const provider = providerSelect ? providerSelect.value : 'openai';
+                    
+                    if (apiKey) {
+                        await chrome.storage.sync.set({
+                            aiApiKey: apiKey,
+                            aiProvider: provider
+                        });
+                        console.log('API key saved for provider:', provider);
+                    }
+                } catch (error) {
+                    console.error('Error saving API key:', error);
+                }
+            }
+
+            async testConnection() {
+                const apiKey = this.apiKeyInput.value.trim();
+                if (!apiKey) {
+                    this.showNotification('Please enter an API key first', 'error');
+                    return;
+                }
+
+                this.testButton.textContent = 'Testing...';
+                this.testButton.disabled = true;
+
+                try {
+                    // Save the API key first
+                    await this.saveApiKey();
+                    
+                    // Test the connection
+                    const response = await fetch('https://api.openai.com/v1/models', {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.showNotification('✅ API connection successful!', 'success');
+                    } else {
+                        const error = await response.json();
+                        this.showNotification(`❌ API connection failed: ${error.error?.message || 'Unknown error'}`, 'error');
+                    }
+                } catch (error) {
+                    this.showNotification(`❌ Connection test failed: ${error.message}`, 'error');
+                } finally {
+                    this.testButton.textContent = 'Test';
+                    this.testButton.disabled = false;
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#34a853' : type === 'error' ? '#ea4335' : '#1a73e8'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                    z-index: 1000;
+                    font-size: 14px;
+                    font-weight: 500;
+                    animation: slideIn 300ms ease-out;
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 300ms ease-in';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+        }
 
         // Add CSS animations
         const style = document.createElement('style');
