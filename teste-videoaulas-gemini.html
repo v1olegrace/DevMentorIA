@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevMentor AI - Sistema de Videoaulas com Gemini Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 25px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .button.secondary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+        
+        .button.warning {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        
+        .config-info {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+            margin: 20px 0;
+        }
+        
+        .config-info h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        
+        .config-info code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .code-input {
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            resize: vertical;
+        }
+        
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .option-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .option-group h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        
+        .option-group select, .option-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        
+        .results-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .results-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        
+        .lesson-preview {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin: 15px 0;
+        }
+        
+        .lesson-preview h4 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        .sources-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .source-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 10px;
+        }
+        
+        .source-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .source-item h5 {
+            margin: 0 0 5px 0;
+            color: #495057;
+        }
+        
+        .source-item p {
+            margin: 0;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .source-item a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .source-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 DevMentor AI</h1>
+            <p>Sistema Avançado de Videoaulas com Gemini Pro</p>
+        </div>
+        
+        <div class="content">
+            <div class="config-info">
+                <h3>🔧 Sistema de Videoaulas</h3>
+                <p><strong>Funcionalidades:</strong> Geração de videoaulas completas, citação de fontes importantes, quizzes educacionais, exercícios práticos</p>
+                <p><strong>Status:</strong> <span id="system-status">Verificando...</span></p>
+            </div>
+            
+            <div class="test-section">
+                <h2>📝 Código para Análise</h2>
+                <textarea id="code-input" class="code-input" placeholder="Cole seu código aqui...">function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// Exemplo de uso
+console.log(fibonacci(10)); // 55</textarea>
+                
+                <div class="options-grid">
+                    <div class="option-group">
+                        <h4>🎯 Tipo de Conteúdo</h4>
+                        <select id="content-type">
+                            <option value="tutorial">Tutorial (10-15 min)</option>
+                            <option value="deepDive">Análise Profunda (20-30 min)</option>
+                            <option value="quickTip">Dica Rápida (3-5 min)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h4>👤 Nível do Usuário</h4>
+                        <select id="user-level">
+                            <option value="iniciante">Iniciante</option>
+                            <option value="intermediário" selected>Intermediário</option>
+                            <option value="avançado">Avançado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h4>💻 Linguagem</h4>
+                        <select id="language">
+                            <option value="javascript" selected>JavaScript</option>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                            <option value="csharp">C#</option>
+                            <option value="cpp">C++</option>
+                            <option value="go">Go</option>
+                            <option value="rust">Rust</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <h4>🎯 Áreas de Foco</h4>
+                        <input type="checkbox" id="focus-concepts" checked> Conceitos<br>
+                        <input type="checkbox" id="focus-practice" checked> Prática<br>
+                        <input type="checkbox" id="focus-optimization"> Otimização<br>
+                        <input type="checkbox" id="focus-testing"> Testes
+                    </div>
+                </div>
+                
+                <div class="options-grid">
+                    <div class="option-group">
+                        <h4>📚 Incluir Fontes</h4>
+                        <input type="checkbox" id="include-sources" checked> Fontes Importantes
+                    </div>
+                    
+                    <div class="option-group">
+                        <h4>🧠 Incluir Quizzes</h4>
+                        <input type="checkbox" id="include-quizzes" checked> Quizzes Educacionais
+                    </div>
+                    
+                    <div class="option-group">
+                        <h4>💪 Incluir Exercícios</h4>
+                        <input type="checkbox" id="include-exercises" checked> Exercícios Práticos
+                    </div>
+                    
+                    <div class="option-group">
+                        <h4>🤖 Usar AI</h4>
+                        <input type="checkbox" id="use-ai" checked> Gemini Pro
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h2>🎬 Gerar Videoaula</h2>
+                <button class="button" onclick="gerarVideoaulaCompleta()">🎬 Gerar Videoaula Completa</button>
+                <button class="button secondary" onclick="gerarApenasFontes()">📚 Gerar Apenas Fontes</button>
+                <button class="button warning" onclick="gerarApenasRoteiro()">📝 Gerar Apenas Roteiro</button>
+                <button class="button" onclick="gerarQuizzes()">🧠 Gerar Quizzes</button>
+                <button class="button secondary" onclick="gerarExercicios()">💪 Gerar Exercícios</button>
+                
+                <div id="test-results"></div>
+            </div>
+            
+            <div id="results-section" class="results-section" style="display: none;">
+                <h3>📊 Resultados da Geração</h3>
+                <div id="lesson-preview"></div>
+                <div id="sources-preview"></div>
+                <div id="quizzes-preview"></div>
+                <div id="exercises-preview"></div>
+            </div>
+            
+            <div class="test-section">
+                <h2>📊 Log de Execução</h2>
+                <div id="log" class="log">Aguardando geração...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="utils/gemini-pro-integration.js"></script>
+    <script src="utils/gemini-config.js"></script>
+    <script src="utils/advanced-citation-engine.js"></script>
+    <script src="utils/advanced-video-lesson-generator.js"></script>
+    
+    <script>
+        // Interceptar console.log para mostrar no log
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToLog(message, type = 'log') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : '📋';
+            logElement.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToLog(args.join(' '), 'warn');
+        };
+        
+        // Aguardar carregamento dos scripts
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                verificarStatus();
+                inicializarSistemas();
+            }, 2000);
+        });
+        
+        function verificarStatus() {
+            const statusElement = document.getElementById('system-status');
+            if (window.geminiProIntegration && window.geminiProIntegration.isConfigured) {
+                statusElement.textContent = '✅ Sistema Pronto';
+                statusElement.style.color = '#28a745';
+            } else {
+                statusElement.textContent = '❌ Sistema Não Configurado';
+                statusElement.style.color = '#dc3545';
+            }
+        }
+        
+        async function inicializarSistemas() {
+            try {
+                if (window.advancedCitationEngine) {
+                    await window.advancedCitationEngine.initialize();
+                    console.log('📚 Advanced Citation Engine inicializado');
+                }
+                
+                if (window.advancedVideoLessonGenerator) {
+                    await window.advancedVideoLessonGenerator.initialize();
+                    console.log('🎬 Advanced Video Lesson Generator inicializado');
+                }
+            } catch (error) {
+                console.error('Erro na inicialização:', error);
+            }
+        }
+        
+        function mostrarResultado(mensagem, tipo = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${tipo}`;
+            statusDiv.textContent = mensagem;
+            resultsDiv.appendChild(statusDiv);
+            
+            // Limpar após 8 segundos
+            setTimeout(() => {
+                statusDiv.remove();
+            }, 8000);
+        }
+        
+        function obterOpcoes() {
+            const code = document.getElementById('code-input').value;
+            const contentType = document.getElementById('content-type').value;
+            const userLevel = document.getElementById('user-level').value;
+            const language = document.getElementById('language').value;
+            
+            const focusAreas = [];
+            if (document.getElementById('focus-concepts').checked) focusAreas.push('conceitos');
+            if (document.getElementById('focus-practice').checked) focusAreas.push('prática');
+            if (document.getElementById('focus-optimization').checked) focusAreas.push('otimização');
+            if (document.getElementById('focus-testing').checked) focusAreas.push('testes');
+            
+            return {
+                code,
+                contentType,
+                userLevel,
+                language,
+                focusAreas,
+                includeSources: document.getElementById('include-sources').checked,
+                includeQuizzes: document.getElementById('include-quizzes').checked,
+                includeExercises: document.getElementById('include-exercises').checked,
+                useAI: document.getElementById('use-ai').checked
+            };
+        }
+        
+        async function gerarVideoaulaCompleta() {
+            console.log('🎬 Iniciando geração de videoaula completa...');
+            mostrarResultado('🔄 Gerando videoaula completa...', 'info');
+            
+            try {
+                const opcoes = obterOpcoes();
+                
+                if (!opcoes.code.trim()) {
+                    mostrarResultado('❌ Por favor, insira um código para análise', 'error');
+                    return;
+                }
+                
+                if (!window.advancedVideoLessonGenerator) {
+                    mostrarResultado('❌ Sistema de videoaulas não disponível', 'error');
+                    return;
+                }
+                
+                const videoaula = await window.advancedVideoLessonGenerator.generateCompleteVideoLesson(
+                    opcoes.code,
+                    opcoes
+                );
+                
+                mostrarResultado('✅ Videoaula gerada com sucesso!', 'success');
+                exibirResultados(videoaula);
+                
+            } catch (error) {
+                console.error('Erro na geração:', error);
+                mostrarResultado(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function gerarApenasFontes() {
+            console.log('📚 Gerando fontes importantes...');
+            mostrarResultado('🔄 Buscando fontes...', 'info');
+            
+            try {
+                const opcoes = obterOpcoes();
+                
+                if (!window.advancedCitationEngine) {
+                    mostrarResultado('❌ Sistema de citação não disponível', 'error');
+                    return;
+                }
+                
+                const fontes = await window.advancedCitationEngine.findIntelligentSources(
+                    opcoes.code,
+                    opcoes.language,
+                    {
+                        userLevel: opcoes.userLevel,
+                        focusAreas: opcoes.focusAreas,
+                        includeAI: opcoes.useAI
+                    }
+                );
+                
+                mostrarResultado('✅ Fontes encontradas!', 'success');
+                exibirFontes(fontes);
+                
+            } catch (error) {
+                console.error('Erro na busca de fontes:', error);
+                mostrarResultado(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function gerarApenasRoteiro() {
+            console.log('📝 Gerando roteiro de vídeo...');
+            mostrarResultado('🔄 Criando roteiro...', 'info');
+            
+            try {
+                const opcoes = obterOpcoes();
+                
+                if (!window.geminiProIntegration) {
+                    mostrarResultado('❌ Gemini Pro não disponível', 'error');
+                    return;
+                }
+                
+                const prompt = `Crie um roteiro detalhado para uma videoaula sobre este código:
+
+CÓDIGO:
+\`\`\`${opcoes.language}
+${opcoes.code}
+\`\`\`
+
+TIPO: ${opcoes.contentType}
+NÍVEL: ${opcoes.userLevel}
+
+Responda com JSON contendo seções: introduction, conceptExplanation, codeWalkthrough, examples, conclusion.
+Para cada seção: duration, narration, visuals, codeHighlights.`;
+
+                const resposta = await window.geminiProIntegration.generateContent(prompt);
+                const roteiro = JSON.parse(resposta);
+                
+                mostrarResultado('✅ Roteiro gerado!', 'success');
+                exibirRoteiro(roteiro);
+                
+            } catch (error) {
+                console.error('Erro no roteiro:', error);
+                mostrarResultado(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function gerarQuizzes() {
+            console.log('🧠 Gerando quizzes educacionais...');
+            mostrarResultado('🔄 Criando quizzes...', 'info');
+            
+            try {
+                const opcoes = obterOpcoes();
+                
+                if (!window.geminiProIntegration) {
+                    mostrarResultado('❌ Gemini Pro não disponível', 'error');
+                    return;
+                }
+                
+                const prompt = `Crie quizzes educacionais para este código:
+
+CÓDIGO:
+\`\`\`${opcoes.language}
+${opcoes.code}
+\`\`\`
+
+NÍVEL: ${opcoes.userLevel}
+
+Responda com array JSON de quizzes: question, options, correctAnswer, explanation, difficulty.`;
+
+                const resposta = await window.geminiProIntegration.generateContent(prompt);
+                const quizzes = JSON.parse(resposta);
+                
+                mostrarResultado('✅ Quizzes gerados!', 'success');
+                exibirQuizzes(quizzes);
+                
+            } catch (error) {
+                console.error('Erro nos quizzes:', error);
+                mostrarResultado(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function gerarExercicios() {
+            console.log('💪 Gerando exercícios práticos...');
+            mostrarResultado('🔄 Criando exercícios...', 'info');
+            
+            try {
+                const opcoes = obterOpcoes();
+                
+                if (!window.geminiProIntegration) {
+                    mostrarResultado('❌ Gemini Pro não disponível', 'error');
+                    return;
+                }
+                
+                const prompt = `Crie exercícios práticos para este código:
+
+CÓDIGO:
+\`\`\`${opcoes.language}
+${opcoes.code}
+\`\`\`
+
+NÍVEL: ${opcoes.userLevel}
+
+Responda com array JSON de exercícios: title, description, difficulty, hints, solution.`;
+
+                const resposta = await window.geminiProIntegration.generateContent(prompt);
+                const exercicios = JSON.parse(resposta);
+                
+                mostrarResultado('✅ Exercícios gerados!', 'success');
+                exibirExercicios(exercicios);
+                
+            } catch (error) {
+                console.error('Erro nos exercícios:', error);
+                mostrarResultado(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        function exibirResultados(videoaula) {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.style.display = 'block';
+            
+            // Exibir preview da aula
+            const lessonPreview = document.getElementById('lesson-preview');
+            lessonPreview.innerHTML = `
+                <div class="lesson-preview">
+                    <h4>🎬 ${videoaula.metadata.title}</h4>
+                    <p><strong>Duração:</strong> ${videoaula.metadata.duration}</p>
+                    <p><strong>Dificuldade:</strong> ${videoaula.metadata.difficulty}</p>
+                    <p><strong>Linguagem:</strong> ${videoaula.metadata.language}</p>
+                    <p><strong>Conceito Principal:</strong> ${videoaula.codeAnalysis.mainConcept}</p>
+                </div>
+            `;
+            
+            // Exibir fontes
+            if (videoaula.sources) {
+                exibirFontes(videoaula.sources);
+            }
+            
+            // Exibir quizzes
+            if (videoaula.quizzes) {
+                exibirQuizzes(videoaula.quizzes);
+            }
+            
+            // Exibir exercícios
+            if (videoaula.exercises) {
+                exibirExercicios(videoaula.exercises);
+            }
+        }
+        
+        function exibirFontes(fontes) {
+            const sourcesPreview = document.getElementById('sources-preview');
+            let html = '<h4>📚 Fontes Importantes</h4><div class="sources-list">';
+            
+            Object.keys(fontes).forEach(categoria => {
+                if (fontes[categoria].length > 0) {
+                    html += `<h5>${window.advancedCitationEngine.getCategoryTitle(categoria)}</h5>`;
+                    fontes[categoria].forEach(fonte => {
+                        html += `
+                            <div class="source-item">
+                                <h5><a href="${fonte.url}" target="_blank">${fonte.title}</a></h5>
+                                <p>${fonte.description}</p>
+                                <p><small>Relevância: ${fonte.relevanceScore}/10</small></p>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            html += '</div>';
+            sourcesPreview.innerHTML = html;
+        }
+        
+        function exibirRoteiro(roteiro) {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.style.display = 'block';
+            
+            const lessonPreview = document.getElementById('lesson-preview');
+            lessonPreview.innerHTML = `
+                <div class="lesson-preview">
+                    <h4>📝 Roteiro de Vídeo</h4>
+                    ${Object.keys(roteiro).map(secao => `
+                        <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <h5>${secao}</h5>
+                            <p><strong>Duração:</strong> ${roteiro[secao].duration || 'N/A'} segundos</p>
+                            <p><strong>Narração:</strong> ${roteiro[secao].narration || 'N/A'}</p>
+                            <p><strong>Visuais:</strong> ${roteiro[secao].visuals || 'N/A'}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        function exibirQuizzes(quizzes) {
+            const quizzesPreview = document.getElementById('quizzes-preview');
+            let html = '<h4>🧠 Quizzes Educacionais</h4>';
+            
+            quizzes.forEach((quiz, index) => {
+                html += `
+                    <div class="lesson-preview">
+                        <h5>Quiz ${index + 1}: ${quiz.question}</h5>
+                        <p><strong>Dificuldade:</strong> ${quiz.difficulty || 'N/A'}/5</p>
+                        <p><strong>Resposta Correta:</strong> ${quiz.correctAnswer}</p>
+                        <p><strong>Explicação:</strong> ${quiz.explanation}</p>
+                    </div>
+                `;
+            });
+            
+            quizzesPreview.innerHTML = html;
+        }
+        
+        function exibirExercicios(exercicios) {
+            const exercisesPreview = document.getElementById('exercises-preview');
+            let html = '<h4>💪 Exercícios Práticos</h4>';
+            
+            exercicios.forEach((exercicio, index) => {
+                html += `
+                    <div class="lesson-preview">
+                        <h5>Exercício ${index + 1}: ${exercicio.title}</h5>
+                        <p><strong>Descrição:</strong> ${exercicio.description}</p>
+                        <p><strong>Dificuldade:</strong> ${exercicio.difficulty || 'N/A'}/5</p>
+                        <p><strong>Tempo Estimado:</strong> ${exercicio.estimatedTime || 'N/A'} minutos</p>
+                        <p><strong>Dicas:</strong> ${exercicio.hints ? exercicio.hints.join(', ') : 'N/A'}</p>
+                    </div>
+                `;
+            });
+            
+            exercisesPreview.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
+
+
+

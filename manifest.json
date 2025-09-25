@@ -1,0 +1,228 @@
+{
+  "manifest_version": 3,
+  "name": "DevMentor AI - Enterprise Code Assistant",
+  "version": "2.0.0",
+  "description": "🚀 Enterprise-grade AI coding assistant powered by Chrome's Built-in AI. Complete privacy, offline-first, with Google best practices integration. Perfect for developers, teams, and educational institutions.",
+  
+  "permissions": [
+    "activeTab",
+    "contextMenus", 
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  
+  "host_permissions": [
+    "https://github.com/*",
+    "https://gitlab.com/*",
+    "https://bitbucket.org/*",
+    "https://codepen.io/*",
+    "https://jsfiddle.net/*",
+    "https://codesandbox.io/*",
+    "https://replit.com/*",
+    "https://stackoverflow.com/*",
+    "https://stackexchange.com/*",
+    "https://leetcode.com/*",
+    "https://hackerrank.com/*",
+    "https://developer.mozilla.org/*",
+    "https://docs.google.com/*",
+    "https://colab.research.google.com/*",
+    "http://localhost/*",
+    "https://localhost/*"
+  ],
+  
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*",
+        "https://gitlab.com/*",
+        "https://bitbucket.org/*",
+        "https://codepen.io/*",
+        "https://jsfiddle.net/*",
+        "https://codesandbox.io/*",
+        "https://replit.com/*",
+        "https://stackoverflow.com/*",
+        "https://stackexchange.com/*",
+        "https://leetcode.com/*",
+        "https://hackerrank.com/*",
+        "https://developer.mozilla.org/*",
+        "https://docs.google.com/*",
+        "https://colab.research.google.com/*",
+        "http://localhost/*",
+        "https://localhost/*"
+      ],
+      "js": [
+        "utils/constants.js",
+        "utils/telemetry-sinks.js",
+        "utils/privacy-sanitizer.js",
+        "utils/observability-manager.js",
+        "utils/alerting-system.js",
+        "utils/siem-integration.js",
+        "utils/telemetry-dashboard.js",
+        "utils/observability-demo.js",
+        "utils/helpers.js",
+        "utils/language-detector.js", 
+        "utils/error-handler.js",
+        "content/code-analyzer.js",
+        "content/screenshot-handler.js",
+        "content/ui-manager.js",
+        "content/content-script.js"
+      ],
+      "css": [
+        "assets/styles/main.css",
+        "assets/styles/sidebar.css",
+        "assets/styles/animations.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "DevMentor AI - Enterprise Code Assistant",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png", 
+    "128": "assets/icons/icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/templates/*.js",
+        "assets/styles/*.css",
+        "assets/icons/*.png",
+        "assets/fonts/*.woff2"
+      ],
+      "matches": [
+        "https://github.com/*",
+        "https://gitlab.com/*",
+        "https://bitbucket.org/*",
+        "https://codepen.io/*",
+        "https://jsfiddle.net/*",
+        "https://codesandbox.io/*",
+        "https://replit.com/*",
+        "https://stackoverflow.com/*",
+        "https://stackexchange.com/*",
+        "https://leetcode.com/*",
+        "https://hackerrank.com/*",
+        "https://developer.mozilla.org/*",
+        "https://docs.google.com/*",
+        "https://colab.research.google.com/*",
+        "http://localhost/*",
+        "https://localhost/*"
+      ]
+    }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com;"
+  },
+  
+  "minimum_chrome_version": "127",
+  
+  "author": "DevMentor AI Team - Google Hackathon 2024",
+  "homepage_url": "https://github.com/devmentor-ai/chrome-extension",
+  
+  "commands": {
+    "explain-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "🧠 Explain selected code with AI"
+    },
+    "debug-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+D", 
+        "mac": "Command+Shift+D"
+      },
+      "description": "🐛 Debug and analyze code issues"
+    },
+    "refactor-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+R",
+        "mac": "Command+Shift+R"
+      },
+      "description": "⚡ Refactor code with Google best practices"
+    },
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+M",
+        "mac": "Command+Shift+M"
+      },
+      "description": "📱 Toggle DevMentor AI sidebar"
+    },
+    "collaborate": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+C",
+        "mac": "Command+Shift+C"
+      },
+      "description": "👥 Start collaborative code review"
+    },
+    "open-telemetry": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+T",
+        "mac": "Command+Shift+T"
+      },
+      "description": "📊 Open telemetry dashboard"
+    }
+  },
+  
+  "options_ui": {
+    "page": "popup/popup.html",
+    "open_in_tab": false
+  },
+  
+  "externally_connectable": {
+    "matches": [
+      "https://github.com/*",
+      "https://gitlab.com/*",
+      "https://bitbucket.org/*",
+      "https://codepen.io/*",
+      "https://jsfiddle.net/*",
+      "https://codesandbox.io/*",
+      "https://replit.com/*",
+      "https://stackoverflow.com/*",
+      "https://stackexchange.com/*",
+      "https://leetcode.com/*",
+      "https://hackerrank.com/*",
+      "https://developer.mozilla.org/*",
+      "https://docs.google.com/*",
+      "https://colab.research.google.com/*",
+      "http://localhost/*",
+      "https://localhost/*"
+    ]
+  },
+  
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  
+  "oauth2": {
+    "client_id": "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]
+  },
+  
+  "chrome_url_overrides": {
+    "newtab": "popup/popup.html"
+  },
+  
+  "devtools_page": "devtools/devtools.html"
+}
