@@ -104,6 +104,9 @@ class LocalCacheSystem {
     if (!this.config.persistenceEnabled) return;
     
     try {
+      // Backup do estado atual
+      const backup = await chrome.storage.local.get(['persistentCache']);
+      
       const cacheData = {};
       
       for (const [key, item] of this.cache) {
@@ -111,17 +114,37 @@ class LocalCacheSystem {
           value: item.value,
           expiresAt: item.expiresAt,
           createdAt: item.createdAt,
-          accessCount: item.accessCount
+          accessCount: item.accessCount,
+          originalSize: item.originalSize,
+          compressedSize: item.compressedSize,
+          isCompressed: item.isCompressed
         };
       }
       
+      // Salvar com backup
       await chrome.storage.local.set({
-        persistentCache: JSON.stringify(cacheData)
+        persistentCache: JSON.stringify(cacheData),
+        persistentCacheBackup: backup.persistentCache || null,
+        persistentCacheTimestamp: Date.now()
       });
       
-      this.logger.debug('[LocalCacheSystem] Persistent cache saved');
+      this.logger.debug('[LocalCacheSystem] Persistent cache saved with backup');
+      
     } catch (error) {
       this.logger.error('[LocalCacheSystem] Failed to save persistent cache:', error);
+      
+      // Tentar restaurar backup se disponível
+      try {
+        const backup = await chrome.storage.local.get(['persistentCacheBackup']);
+        if (backup.persistentCacheBackup) {
+          await chrome.storage.local.set({
+            persistentCache: backup.persistentCacheBackup
+          });
+          this.logger.info('[LocalCacheSystem] Restored from backup');
+        }
+      } catch (restoreError) {
+        this.logger.error('[LocalCacheSystem] Failed to restore backup:', restoreError);
+      }
     }
   }
 
@@ -162,47 +185,69 @@ class LocalCacheSystem {
   }
 
   set(key, value, ttl = null) {
-    const expiresAt = Date.now() + (ttl || this.config.defaultTTL);
+    const lockKey = `lock_${key}`;
     
-    // Validar tamanho antes de processar
-    const valueSize = this.calculateValueSize(value);
-    if (valueSize > this.config.memoryLimit) {
-      this.logger.warn(`[LocalCacheSystem] Value too large for ${key}: ${valueSize} bytes`);
-      return false;
+    // Mutex atômico para operações de set
+    if (this.locks.has(lockKey)) {
+      return new Promise((resolve) => {
+        const checkLock = () => {
+          if (!this.locks.has(lockKey)) {
+            resolve(this.set(key, value, ttl));
+          } else {
+            setTimeout(checkLock, 10);
+          }
+        };
+        checkLock();
+      });
     }
     
-    // Comprimir valor se habilitado e necessário
-    const processedValue = this.shouldCompress(value) 
-      ? this.compress(value) 
-      : value;
+    this.locks.set(lockKey, true);
     
-    // Remover item existente se houver
-    if (this.cache.has(key)) {
-      this.removeFromAccessOrder(key);
+    try {
+      const expiresAt = Date.now() + (ttl || this.config.defaultTTL);
+      
+      // Validar tamanho antes de processar
+      const valueSize = this.calculateValueSize(value);
+      if (valueSize > this.config.memoryLimit) {
+        this.logger.warn(`[LocalCacheSystem] Value too large for ${key}: ${valueSize} bytes`);
+        return false;
+      }
+      
+      // Comprimir valor se habilitado e necessário
+      const processedValue = this.shouldCompress(value) 
+        ? this.compress(value) 
+        : value;
+      
+      // Remover item existente se houver
+      if (this.cache.has(key)) {
+        this.removeFromAccessOrder(key);
+      }
+      
+      // Adicionar novo item
+      this.cache.set(key, {
+        value: processedValue,
+        expiresAt: expiresAt,
+        createdAt: Date.now(),
+        accessCount: 0,
+        originalSize: valueSize,
+        compressedSize: this.calculateValueSize(processedValue),
+        isCompressed: this.shouldCompress(value)
+      });
+      
+      this.accessOrder.push(key);
+      this.stats.sets++;
+      this.stats.size = this.cache.size;
+      
+      // Evict se necessário
+      if (this.cache.size > this.config.maxSize) {
+        this.evictLRU();
+      }
+      
+      this.logger.debug(`[LocalCacheSystem] Set ${key} (${valueSize} bytes, compressed: ${this.shouldCompress(value)})`);
+      return true;
+    } finally {
+      this.locks.delete(lockKey);
     }
-    
-    // Adicionar novo item
-    this.cache.set(key, {
-      value: processedValue,
-      expiresAt: expiresAt,
-      createdAt: Date.now(),
-      accessCount: 0,
-      originalSize: valueSize,
-      compressedSize: this.calculateValueSize(processedValue),
-      isCompressed: this.shouldCompress(value)
-    });
-    
-    this.accessOrder.push(key);
-    this.stats.sets++;
-    this.stats.size = this.cache.size;
-    
-    // Evict se necessário
-    if (this.cache.size > this.config.maxSize) {
-      this.evictLRU();
-    }
-    
-    this.logger.debug(`[LocalCacheSystem] Set ${key} (${valueSize} bytes, compressed: ${this.shouldCompress(value)})`);
-    return true;
   }
 
   get(key) {
@@ -259,10 +304,18 @@ class LocalCacheSystem {
   delete(key) {
     const lockKey = `lock_${key}`;
     
-    // Verificar se já está sendo processado
+    // Mutex atômico com Promise para evitar race conditions
     if (this.locks.has(lockKey)) {
-      this.logger.debug(`[LocalCacheSystem] Key ${key} is locked, skipping delete`);
-      return false;
+      return new Promise((resolve) => {
+        const checkLock = () => {
+          if (!this.locks.has(lockKey)) {
+            resolve(this.delete(key));
+          } else {
+            setTimeout(checkLock, 10); // Retry em 10ms
+          }
+        };
+        checkLock();
+      });
     }
     
     this.locks.set(lockKey, true);
@@ -308,6 +361,30 @@ class LocalCacheSystem {
     if (index !== -1) {
       this.accessOrder.splice(index, 1);
     }
+  }
+
+  // Métodos auxiliares para compressão inteligente
+  calculateValueSize(value) {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'string') return value.length * 2; // UTF-16
+    if (typeof value === 'number') return 8;
+    if (typeof value === 'boolean') return 4;
+    if (typeof value === 'function') return 0;
+    
+    // Para objetos complexos, usar JSON.stringify como fallback
+    try {
+      return JSON.stringify(value).length * 2;
+    } catch (error) {
+      this.logger.warn('[LocalCacheSystem] Failed to calculate value size:', error);
+      return 1024; // Estimativa conservadora
+    }
+  }
+
+  shouldCompress(value) {
+    if (!this.config.compressionEnabled) return false;
+    
+    const size = this.calculateValueSize(value);
+    return size > this.config.compressionThreshold;
   }
 
   // Métodos de compressão
