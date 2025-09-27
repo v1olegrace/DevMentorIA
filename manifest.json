@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "DevMentor AI - Enterprise Code Assistant",
-  "version": "2.0.0",
-  "description": "🚀 Enterprise-grade AI coding assistant powered by Chrome's Built-in AI. Complete privacy, offline-first, with Google best practices integration. Perfect for developers, teams, and educational institutions.",
+  "name": "DevMentor AI - Your Personal Coding Assistant",
+  "version": "1.0.0",
+  "description": "AI-powered code explanation, debugging, and learning assistant that works completely offline using Chrome's Built-in AI",
   
   "permissions": [
     "activeTab",
-    "contextMenus", 
+    "contextMenus",
     "storage",
-    "scripting",
-    "tabs"
+    "scripting"
   ],
   
   "host_permissions": [
@@ -38,26 +37,13 @@
   
   "content_scripts": [
     {
-      "matches": [
-        "https://github.com/*",
-        "https://gitlab.com/*",
-        "https://bitbucket.org/*",
-        "https://codepen.io/*",
-        "https://jsfiddle.net/*",
-        "https://codesandbox.io/*",
-        "https://replit.com/*",
-        "https://stackoverflow.com/*",
-        "https://stackexchange.com/*",
-        "https://leetcode.com/*",
-        "https://hackerrank.com/*",
-        "https://developer.mozilla.org/*",
-        "https://docs.google.com/*",
-        "https://colab.research.google.com/*",
-        "http://localhost/*",
-        "https://localhost/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": [
+        "utils/secure-eval-manager.js",
+        "utils/secure-html-sanitizer.js",
+        "utils/secure-logger.js",
         "utils/constants.js",
+<<<<<<< HEAD
         "utils/telemetry-sinks.js",
         "utils/privacy-sanitizer.js",
         "utils/observability-manager.js",
@@ -67,6 +53,10 @@
         "utils/observability-demo.js",
         "utils/helpers.js",
         "utils/language-detector.js", 
+=======
+        "utils/helpers.js", 
+        "utils/language-detector.js",
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
         "utils/error-handler.js",
         "content/code-analyzer.js",
         "content/screenshot-handler.js",
@@ -75,17 +65,16 @@
       ],
       "css": [
         "assets/styles/main.css",
-        "assets/styles/sidebar.css",
+        "assets/styles/sidebar.css", 
         "assets/styles/animations.css"
       ],
-      "run_at": "document_idle",
-      "all_frames": false
+      "run_at": "document_end"
     }
   ],
   
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "DevMentor AI - Enterprise Code Assistant",
+    "default_title": "DevMentor AI - Coding Assistant",
     "default_icon": {
       "16": "assets/icons/icon16.png",
       "32": "assets/icons/icon32.png",
@@ -96,8 +85,8 @@
   
   "icons": {
     "16": "assets/icons/icon16.png",
-    "32": "assets/icons/icon32.png",
-    "48": "assets/icons/icon48.png", 
+    "32": "assets/icons/icon32.png", 
+    "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   },
   
@@ -106,31 +95,14 @@
       "resources": [
         "assets/templates/*.js",
         "assets/styles/*.css",
-        "assets/icons/*.png",
-        "assets/fonts/*.woff2"
+        "assets/icons/*.png"
       ],
-      "matches": [
-        "https://github.com/*",
-        "https://gitlab.com/*",
-        "https://bitbucket.org/*",
-        "https://codepen.io/*",
-        "https://jsfiddle.net/*",
-        "https://codesandbox.io/*",
-        "https://replit.com/*",
-        "https://stackoverflow.com/*",
-        "https://stackexchange.com/*",
-        "https://leetcode.com/*",
-        "https://hackerrank.com/*",
-        "https://developer.mozilla.org/*",
-        "https://docs.google.com/*",
-        "https://colab.research.google.com/*",
-        "http://localhost/*",
-        "https://localhost/*"
-      ]
+      "matches": ["<all_urls>"]
     }
   ],
   
   "content_security_policy": {
+<<<<<<< HEAD
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com;"
   },
   
@@ -226,3 +198,9 @@
   
   "devtools_page": "devtools/devtools.html"
 }
+=======
+    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; media-src 'self' data:;"
+  }
+}
+
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

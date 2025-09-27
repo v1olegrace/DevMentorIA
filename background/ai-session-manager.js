@@ -64,7 +64,7 @@ class AISessionManager {
 
   async _performInitialization() {
     try {
-      console.log('[AISessionManager] Starting production initialization...');
+      this.logger.info('[AISessionManager] Starting production initialization...');
       this.state = 'INITIALIZING';
       
       // 1. Check Chrome AI availability with detailed diagnostics
@@ -89,7 +89,7 @@ class AISessionManager {
       await this._initializeDemoFeatures();
       
       this.state = 'READY';
-      console.log('[AISessionManager] Production initialization complete');
+      this.logger.info('[AISessionManager] Production initialization complete');
       
       // Emit ready event for UI
       this._emitReadyEvent();
@@ -98,7 +98,7 @@ class AISessionManager {
       
     } catch (error) {
       this.state = 'ERROR';
-      console.error('[AISessionManager] Initialization failed:', error);
+      this.logger.error('[AISessionManager] Initialization failed:', error);
       
       // Emit detailed error for debugging
       this._emitInitializationError(error);
@@ -210,7 +210,7 @@ class AISessionManager {
         resetTimeout: 15000 // Faster recovery
       }));
       
-      console.log(`[AISessionManager] ${apiType} pool initialized`);
+      this.logger.info(`[AISessionManager] ${apiType} pool initialized`);
     }
   }
 
@@ -425,7 +425,7 @@ class AISessionManager {
     const cached = this.googleOptimizations.contextCache.get(cacheKey);
     
     if (cached && this._isCacheValid(cached)) {
-      console.log(`[AISessionManager] Cache hit for ${analysisType}`);
+      this.logger.info(`[AISessionManager] Cache hit for ${analysisType}`);
       return cached.result;
     }
     
@@ -450,7 +450,7 @@ class AISessionManager {
       try {
         await this._performHealthChecks();
       } catch (error) {
-        console.error('[AISessionManager] Health check failed:', error);
+        this.logger.error('[AISessionManager] Health check failed:', error);
         this._handleHealthCheckFailure(error);
       }
     }, this.config.healthCheckInterval);
@@ -464,7 +464,7 @@ class AISessionManager {
       healthResults.set(apiType, health);
       
       if (!health.healthy) {
-        console.warn(`[AISessionManager] ${apiType} pool unhealthy:`, health.issues);
+        this.logger.warn(`[AISessionManager] ${apiType} pool unhealthy:`, health.issues);
         await this._healUnhealthyPool(pool, apiType);
       }
     }
@@ -485,7 +485,7 @@ class AISessionManager {
   }
 
   async _performShutdown() {
-    console.log('[AISessionManager] Starting graceful shutdown...');
+    this.logger.info('[AISessionManager] Starting graceful shutdown...');
     this.state = 'SHUTTING_DOWN';
     
     try {
@@ -506,10 +506,10 @@ class AISessionManager {
       this.metrics.clear();
       
       this.state = 'SHUTDOWN';
-      console.log('[AISessionManager] Graceful shutdown complete');
+      this.logger.info('[AISessionManager] Graceful shutdown complete');
       
     } catch (error) {
-      console.error('[AISessionManager] Shutdown error:', error);
+      this.logger.error('[AISessionManager] Shutdown error:', error);
       this.state = 'ERROR';
       throw error;
     }
@@ -631,7 +631,7 @@ class AISessionManager {
 
   // Demo-specific methods for hackathon
   async _initializeDemoFeatures() {
-    console.log('[AISessionManager] Initializing demo features for Google hackathon...');
+    this.logger.info('[AISessionManager] Initializing demo features for Google hackathon...');
     
     // Pre-load common code patterns for faster demo
     await this._preloadCommonPatterns();
@@ -754,7 +754,7 @@ class ConnectionPool {
 
   async shutdown() {
     const shutdownPromises = Array.from(this.connections).map(conn => 
-      conn.destroy().catch(err => console.warn('Connection cleanup error:', err))
+      conn.destroy().catch(err => this.logger.warn('Connection cleanup error:', err))
     );
     
     await Promise.allSettled(shutdownPromises);
@@ -872,3 +872,5 @@ class CircuitBreakerOpenError extends Error {
 
 // Export singleton
 self.aiSessionManager = new AISessionManager();
+
+

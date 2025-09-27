@@ -378,6 +378,7 @@ window.addEventListener('unhandledrejection', (event) => {
 export default errorHandler;
 
 
+<<<<<<< HEAD
 
 
 
@@ -385,3 +386,5 @@ export default errorHandler;
 
 
 
+=======
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

@@ -1,34 +1,32 @@
 /**
- * DevMentor AI - REAL Code Analyzer
- * Enterprise-grade code analysis with real AI integration
+ * DevMentor AI - Secure Code Analyzer
+ * Enterprise-grade code analysis with secure backend proxy
+ * API keys are handled server-side for security
  */
 
 class CodeAnalyzer {
   constructor() {
-    this.aiProviders = {
-      openai: 'https://api.openai.com/v1/chat/completions',
-      gemini: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-      claude: 'https://api.anthropic.com/v1/messages'
-    };
-    
-    this.currentProvider = 'openai'; // Default provider
-    this.apiKey = null;
+    // SECURITY: No API keys stored in client code
+    this.backendEndpoint = '/api/proxy/analyze'; // Backend proxy endpoint
     this.cache = new Map();
     this.maxCacheSize = 100;
+    this.logger = (typeof window !== 'undefined' && window.__DEVMENTOR_LOGGER) || {
+      debug: (...args) => console.debug(...args),
+      info: (...args) => console.info(...args),
+      warn: (...args) => console.warn(...args),
+      error: (...args) => console.error(...args)
+    };
     
     this.initialize();
   }
 
   async initialize() {
     try {
-      // Load API key from storage
-      const result = await chrome.storage.sync.get(['aiApiKey', 'aiProvider']);
-      this.apiKey = result.aiApiKey;
-      this.currentProvider = result.aiProvider || 'openai';
-      
-      console.log('[CodeAnalyzer] Initialized with provider:', this.currentProvider);
+      // SECURITY: No API keys stored in client
+      // All AI requests go through secure backend proxy
+      this.logger.info('[CodeAnalyzer] Initialized with secure backend proxy');
     } catch (error) {
-      console.error('[CodeAnalyzer] Initialization error:', error);
+      this.logger.error('[CodeAnalyzer] Initialization error:', error);
     }
   }
 
@@ -42,7 +40,7 @@ class CodeAnalyzer {
       // Check cache first
       const cacheKey = this.getCacheKey(code, analysisType);
       if (this.cache.has(cacheKey)) {
-        console.log('[CodeAnalyzer] Returning cached result');
+        this.logger.debug('[CodeAnalyzer] Returning cached result');
         return this.cache.get(cacheKey);
       }
 
@@ -52,8 +50,8 @@ class CodeAnalyzer {
       // Generate prompt
       const prompt = this.generatePrompt(code, analysisType, language, options);
       
-      // Call AI API
-      const aiResponse = await this.callAI(prompt, options);
+      // Call secure backend proxy
+      const aiResponse = await this.callBackendProxy(prompt, options);
       
       // Process response
       const result = this.processAIResponse(aiResponse, analysisType, code);
@@ -64,7 +62,7 @@ class CodeAnalyzer {
       return result;
       
     } catch (error) {
-      console.error('[CodeAnalyzer] Analysis error:', error);
+      this.logger.error('[CodeAnalyzer] Analysis error:', error);
       return this.getFallbackResponse(code, analysisType, error.message);
     }
   }
@@ -141,107 +139,45 @@ Generate professional documentation in JSDoc format.`
     return prompt;
   }
 
-  async callAI(prompt, options = {}) {
-    if (!this.apiKey) {
-      throw new Error('AI API key not configured. Please set your API key in settings.');
-    }
-
-    switch (this.currentProvider) {
-      case 'openai':
-        return await this.callOpenAI(prompt, options);
-      case 'gemini':
-        return await this.callGemini(prompt, options);
-      case 'claude':
-        return await this.callClaude(prompt, options);
-      default:
-        throw new Error(`Unsupported AI provider: ${this.currentProvider}`);
-    }
-  }
-
-  async callOpenAI(prompt, options = {}) {
-    const response = await fetch(this.aiProviders.openai, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: options.model || 'gpt-4',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
+  /**
+   * Chama o backend proxy seguro para análise de código
+   * @param {string} prompt - Prompt para análise
+   * @param {object} options - Opções de análise
+   * @returns {Promise<string>} Resposta da IA
+   */
+  async callBackendProxy(prompt, options = {}) {
+    try {
+      // SECURITY: All AI requests go through secure backend proxy
+      const response = await fetch(this.backendEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          analysisType: options.analysisType || 'explain',
+          language: options.language || 'javascript',
+          options: {
+            detailLevel: options.detailLevel || 'intermediate',
+            maxTokens: options.maxTokens || 2000,
+            temperature: options.temperature || 0.7
           }
-        ],
-        max_tokens: options.maxTokens || 2000,
-        temperature: options.temperature || 0.7
-      })
-    });
+        })
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Backend proxy error: ${error.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      return data.analysis;
+      
+    } catch (error) {
+      this.logger.error('[CodeAnalyzer] Backend proxy call failed:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-  }
-
-  async callGemini(prompt, options = {}) {
-    const response = await fetch(`${this.aiProviders.gemini}?key=${this.apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          maxOutputTokens: options.maxTokens || 2000,
-          temperature: options.temperature || 0.7
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  }
-
-  async callClaude(prompt, options = {}) {
-    const response = await fetch(this.aiProviders.claude, {
-      method: 'POST',
-      headers: {
-        'x-api-key': this.apiKey,
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: options.model || 'claude-3-sonnet-20240229',
-        max_tokens: options.maxTokens || 2000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Claude API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    return data.content[0].text;
   }
 
   processAIResponse(aiResponse, analysisType, originalCode) {
@@ -250,7 +186,7 @@ Generate professional documentation in JSDoc format.`
       analysis: aiResponse,
       originalCode: originalCode,
       timestamp: new Date().toISOString(),
-      provider: this.currentProvider,
+      provider: 'secure-backend-proxy',
       metadata: {
         codeLength: originalCode.length,
         lines: originalCode.split('\n').length,
@@ -261,10 +197,10 @@ Generate professional documentation in JSDoc format.`
 
   getFallbackResponse(code, analysisType, errorMessage) {
     const fallbackResponses = {
-      explain: `I apologize, but I'm unable to analyze this code right now due to: ${errorMessage}\n\nHowever, I can see this is ${code.split('\n').length} lines of code. Please check your AI API configuration in the extension settings.`,
-      debug: `I'm currently unable to debug this code due to: ${errorMessage}\n\nPlease ensure your AI API key is configured correctly in the extension settings.`,
-      optimize: `I can't optimize this code at the moment due to: ${errorMessage}\n\nPlease check your AI API configuration and try again.`,
-      document: `I'm unable to generate documentation right now due to: ${errorMessage}\n\nPlease verify your AI API settings in the extension options.`
+      explain: `I apologize, but I'm unable to analyze this code right now due to: ${errorMessage}\n\nHowever, I can see this is ${code.split('\n').length} lines of code. Please check your backend configuration.`,
+      debug: `I'm currently unable to debug this code due to: ${errorMessage}\n\nPlease ensure the backend service is running correctly.`,
+      optimize: `I can't optimize this code at the moment due to: ${errorMessage}\n\nPlease check your backend configuration and try again.`,
+      document: `I'm unable to generate documentation right now due to: ${errorMessage}\n\nPlease verify your backend service is available.`
     };
 
     return {
@@ -306,23 +242,14 @@ Generate professional documentation in JSDoc format.`
     this.cache.set(key, result);
   }
 
-  async setApiKey(apiKey, provider = 'openai') {
-    this.apiKey = apiKey;
-    this.currentProvider = provider;
-    
-    // Save to storage
-    await chrome.storage.sync.set({
-      aiApiKey: apiKey,
-      aiProvider: provider
-    });
-    
-    console.log('[CodeAnalyzer] API key updated for provider:', provider);
-  }
-
+  /**
+   * Testa conexão com o backend proxy
+   * @returns {Promise<object>} Resultado do teste
+   */
   async testConnection() {
     try {
       const testPrompt = "Say 'Hello, DevMentor AI is working!'";
-      const response = await this.callAI(testPrompt);
+      const response = await this.callBackendProxy(testPrompt);
       return { success: true, response };
     } catch (error) {
       return { success: false, error: error.message };

@@ -34,6 +34,7 @@ window.ResultTemplates = {
 
 
 
+<<<<<<< HEAD
 
 
 
@@ -41,3 +42,5 @@ window.ResultTemplates = {
 
 
 
+=======
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

@@ -18,7 +18,7 @@ class DevMentorPopup {
    */
   async init() {
     try {
-      console.log('[Popup] Initializing DevMentor AI popup...');
+      this.logger.info('[Popup] Initializing DevMentor AI popup...');
       
       // Get current tab
       this.currentTab = await this.getCurrentTab();
@@ -33,10 +33,10 @@ class DevMentorPopup {
       this.updateUI();
       
       this.isInitialized = true;
-      console.log('[Popup] Popup initialized successfully');
+      this.logger.info('[Popup] Popup initialized successfully');
       
     } catch (error) {
-      console.error('[Popup] Initialization failed:', error);
+      this.logger.error('[Popup] Initialization failed:', error);
       this.showError('Failed to initialize popup');
     }
   }
@@ -99,7 +99,7 @@ class DevMentorPopup {
       this.stats = statsResponse;
 
     } catch (error) {
-      console.error('[Popup] Failed to load data:', error);
+      this.logger.error('[Popup] Failed to load data:', error);
     }
   }
 
@@ -210,7 +210,7 @@ class DevMentorPopup {
       setTimeout(() => window.close(), 1500);
 
     } catch (error) {
-      console.error('[Popup] Action failed:', error);
+      this.logger.error('[Popup] Action failed:', error);
       this.showError('Failed to start analysis');
     } finally {
       this.hideLoading();
@@ -266,7 +266,7 @@ class DevMentorPopup {
       this.showSuccess('Data cleared successfully');
       
     } catch (error) {
-      console.error('[Popup] Clear data failed:', error);
+      this.logger.error('[Popup] Clear data failed:', error);
       this.showError('Failed to clear data');
     } finally {
       this.hideLoading();
@@ -477,6 +477,7 @@ if (document.readyState === 'loading') {
 
 
 
+<<<<<<< HEAD
 
 
 
@@ -484,3 +485,5 @@ if (document.readyState === 'loading') {
 
 
 
+=======
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

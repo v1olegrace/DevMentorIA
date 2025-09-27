@@ -567,6 +567,7 @@ Follow this guide to successfully deploy DevMentor AI and reach developers world
 **Deploy with confidence! 🚀✨**
 
 
+<<<<<<< HEAD
 
 
 
@@ -574,3 +575,5 @@ Follow this guide to successfully deploy DevMentor AI and reach developers world
 
 
 
+=======
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

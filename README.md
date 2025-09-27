@@ -4,7 +4,7 @@
 [![AI Integration](https://img.shields.io/badge/AI%20Integration-Real%20APIs-blue?logo=robot)](https://github.com/devmentor-ai/chrome-extension)
 [![Privacy](https://img.shields.io/badge/Privacy-Local%20Storage-green?logo=shield)](https://github.com/devmentor-ai/chrome-extension)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Google Hackathon 2024](https://img.shields.io/badge/Google%20Hackathon-2024-red?logo=google)](https://hackathon.google.com)
+[![Google Hackathon 2024](https://img.shields.io/badge/Google%20Hackathon-2024-red?logo=google)](https://googlechromeai2025.devpost.com/)
 
 > **Enterprise-grade Chrome extension with real AI integration for code analysis - OpenAI, Gemini, and Claude support with local API key storage.**
 

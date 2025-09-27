@@ -838,6 +838,7 @@ npm run test:e2e
 **Happy coding with DevMentor AI! 🧠✨**
 
 
+<<<<<<< HEAD
 
 
 
@@ -845,3 +846,5 @@ npm run test:e2e
 
 
 
+=======
+>>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

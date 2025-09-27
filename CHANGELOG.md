@@ -266,10 +266,3 @@ DevMentor AI has evolved from a simple proof of concept to an enterprise-ready C
 **Building the future of AI-powered development! 🧠✨**
 
 
-
-
-
-
-
-
-

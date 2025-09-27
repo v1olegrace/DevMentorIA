@@ -12,6 +12,14 @@ class DevMentorServiceWorker {
     this.contextMenus = new Map();
     this.activeRequests = new Map();
     
+    // Initialize secure logger
+    this.logger = {
+      debug: (...args) => console.debug('[ServiceWorker]', ...args),
+      info: (...args) => console.info('[ServiceWorker]', ...args),
+      warn: (...args) => console.warn('[ServiceWorker]', ...args),
+      error: (...args) => console.error('[ServiceWorker]', ...args)
+    };
+    
     this.init();
   }
 
@@ -19,7 +27,7 @@ class DevMentorServiceWorker {
    * Initialize service worker
    */
   async init() {
-    console.log('[ServiceWorker] Starting DevMentor AI...');
+    this.logger.info('Starting DevMentor AI...');
 
     try {
       // Set up event listeners
@@ -32,10 +40,10 @@ class DevMentorServiceWorker {
       await self.aiManager.initialize();
       
       this.isInitialized = true;
-      console.log('[ServiceWorker] DevMentor AI initialized successfully');
+      this.logger.info('DevMentor AI initialized successfully');
       
     } catch (error) {
-      console.error('[ServiceWorker] Initialization failed:', error);
+      this.logger.error('Initialization failed:', error);
     }
   }
 
@@ -66,7 +74,7 @@ class DevMentorServiceWorker {
    * @param {Object} details - Installation details
    */
   async handleInstall(details) {
-    console.log('[ServiceWorker] Extension installed:', details.reason);
+    this.logger.info('Extension installed:', details.reason);
 
     if (details.reason === 'install') {
       // First installation
@@ -82,7 +90,7 @@ class DevMentorServiceWorker {
    * Handle extension startup
    */
   async handleStartup() {
-    console.log('[ServiceWorker] Extension startup');
+    this.logger.info('Extension startup');
     await this.trackUsage('startup');
   }
 
@@ -149,10 +157,10 @@ class DevMentorServiceWorker {
         });
       }
 
-      console.log('[ServiceWorker] Context menus created successfully');
+      this.logger.info('Context menus created successfully');
 
     } catch (error) {
-      console.error('[ServiceWorker] Failed to create context menus:', error);
+      this.logger.error('Failed to create context menus:', error);
     }
   }
 
@@ -162,7 +170,7 @@ class DevMentorServiceWorker {
    * @param {Object} tab - Tab info
    */
   async handleContextMenuClick(info, tab) {
-    console.log('[ServiceWorker] Context menu clicked:', info.menuItemId);
+    this.logger.info('Context menu clicked:', info.menuItemId);
 
     try {
       // Track usage
@@ -188,7 +196,7 @@ class DevMentorServiceWorker {
       }
 
     } catch (error) {
-      console.error('[ServiceWorker] Context menu handling failed:', error);
+      this.logger.error('Context menu handling failed:', error);
       await this.sendErrorToTab(tab.id, error);
     }
   }
@@ -249,7 +257,7 @@ class DevMentorServiceWorker {
       });
 
     } catch (error) {
-      console.error(`[ServiceWorker] ${type} analysis failed:`, error);
+      this.logger.error(`${type} analysis failed:`, error);
       
       // Send error to content script
       await this.sendToTab(tab.id, {
@@ -289,7 +297,7 @@ class DevMentorServiceWorker {
       });
 
     } catch (error) {
-      console.error('[ServiceWorker] Screenshot analysis failed:', error);
+      this.logger.error('Screenshot analysis failed:', error);
       await this.sendErrorToTab(tab.id, error);
     }
   }
@@ -301,7 +309,7 @@ class DevMentorServiceWorker {
    * @param {Function} sendResponse - Response callback
    */
   async handleMessage(message, sender, sendResponse) {
-    console.log('[ServiceWorker] Received message:', message.action);
+    this.logger.info('Received message:', message.action);
 
     try {
       switch (message.action) {
@@ -323,11 +331,11 @@ class DevMentorServiceWorker {
           break;
           
         default:
-          console.warn('[ServiceWorker] Unknown message action:', message.action);
+          this.logger.warn('Unknown message action:', message.action);
       }
 
     } catch (error) {
-      console.error('[ServiceWorker] Message handling failed:', error);
+      this.logger.error('Message handling failed:', error);
       sendResponse({ error: error.message });
     }
 
@@ -370,7 +378,7 @@ class DevMentorServiceWorker {
       });
 
     } catch (error) {
-      console.error('[ServiceWorker] Screenshot processing failed:', error);
+      this.logger.error('Screenshot processing failed:', error);
       
       await this.sendToTab(sender.tab.id, {
         action: 'showError',
@@ -400,7 +408,7 @@ class DevMentorServiceWorker {
       return this.simpleLanguageDetection(code, filename);
       
     } catch (error) {
-      console.warn('[ServiceWorker] Language detection failed:', error);
+      this.logger.warn('Language detection failed:', error);
       return { language: 'auto', confidence: 0 };
     }
   }
@@ -495,7 +503,7 @@ class DevMentorServiceWorker {
     try {
       await chrome.tabs.sendMessage(tabId, message);
     } catch (error) {
-      console.error('[ServiceWorker] Failed to send message to tab:', error);
+      this.logger.error('Failed to send message to tab:', error);
     }
   }
 
@@ -557,7 +565,7 @@ class DevMentorServiceWorker {
    * Handle extension suspend
    */
   async handleSuspend() {
-    console.log('[ServiceWorker] Extension suspending...');
+    this.logger.info('Extension suspending...');
     
     // Clean up resources
     await self.aiManager.destroy();
@@ -591,7 +599,7 @@ class DevMentorServiceWorker {
       await chrome.storage.local.set({ [storageKey]: trimmedStats });
 
     } catch (error) {
-      console.warn('[ServiceWorker] Usage tracking failed:', error);
+      this.logger.warn('Usage tracking failed:', error);
     }
   }
 

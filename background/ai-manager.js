@@ -11,6 +11,14 @@ class AIManager {
     this.config = null;
     this.lastCleanup = Date.now();
     
+    // Initialize secure logger
+    this.logger = {
+      debug: (...args) => console.debug('[AIManager]', ...args),
+      info: (...args) => console.info('[AIManager]', ...args),
+      warn: (...args) => console.warn('[AIManager]', ...args),
+      error: (...args) => console.error('[AIManager]', ...args)
+    };
+    
     // Bind methods
     this.initialize = this.initialize.bind(this);
     this.createSession = this.createSession.bind(this);
@@ -39,7 +47,7 @@ class AIManager {
    */
   async _doInitialize() {
     try {
-      console.log('[AIManager] Initializing...');
+      this.logger.info('[AIManager] Initializing...');
 
       // Import configuration
       if (!this.config) {
@@ -116,11 +124,11 @@ class AIManager {
       this.startCleanupInterval();
 
       this.isInitialized = true;
-      console.log('[AIManager] Initialized successfully');
+      this.logger.info('[AIManager] Initialized successfully');
       return true;
 
     } catch (error) {
-      console.error('[AIManager] Initialization failed:', error);
+      this.logger.error('[AIManager] Initialization failed:', error);
       this.isInitialized = false;
       return false;
     }
@@ -134,12 +142,12 @@ class AIManager {
     try {
       // Check if AI APIs exist
       if (typeof ai === 'undefined') {
-        console.warn('[AIManager] AI object not found');
+        this.logger.warn('[AIManager] AI object not found');
         return false;
       }
 
       if (!ai.prompt || !ai.writer || !ai.proofreader || !ai.rewriter) {
-        console.warn('[AIManager] Required AI APIs not available');
+        this.logger.warn('[AIManager] Required AI APIs not available');
         return false;
       }
 
@@ -152,7 +160,7 @@ class AIManager {
       return true;
 
     } catch (error) {
-      console.error('[AIManager] AI availability check failed:', error);
+      this.logger.error('[AIManager] AI availability check failed:', error);
       return false;
     }
   }
@@ -168,7 +176,7 @@ class AIManager {
       try {
         await this.createSession(type);
       } catch (error) {
-        console.warn(`[AIManager] Failed to create initial ${type} session:`, error);
+        this.logger.warn(`[AIManager] Failed to create initial ${type} session:`, error);
       }
     }
   }
@@ -224,12 +232,12 @@ class AIManager {
       };
 
       this.sessions.set(sessionKey, sessionData);
-      console.log(`[AIManager] Created ${type} session:`, sessionKey);
+      this.logger.info(`[AIManager] Created ${type} session:`, sessionKey);
       
       return sessionInstance;
 
     } catch (error) {
-      console.error(`[AIManager] Failed to create ${type} session:`, error);
+      this.logger.error(`[AIManager] Failed to create ${type} session:`, error);
       throw error;
     }
   }
@@ -401,7 +409,7 @@ class AIManager {
       };
 
     } catch (error) {
-      console.error('[AIManager] Processing failed:', error);
+      this.logger.error('[AIManager] Processing failed:', error);
       throw error;
     }
   }
@@ -467,7 +475,7 @@ class AIManager {
         const delay = this.config.RETRY_DELAY * Math.pow(2, attempt);
         await this.sleep(delay);
         
-        console.log(`[AIManager] Retrying... Attempt ${attempt + 2}/${retries + 1}`);
+        this.logger.info(`[AIManager] Retrying... Attempt ${attempt + 2}/${retries + 1}`);
       }
     }
 
@@ -552,7 +560,7 @@ class AIManager {
         await sessionData.instance.destroy();
       }
     } catch (error) {
-      console.warn(`[AIManager] Error destroying session ${sessionKey}:`, error);
+      this.logger.warn(`[AIManager] Error destroying session ${sessionKey}:`, error);
     } finally {
       this.sessions.delete(sessionKey);
     }
@@ -583,7 +591,7 @@ class AIManager {
     }
 
     if (expiredSessions.length > 0) {
-      console.log(`[AIManager] Cleaned up ${expiredSessions.length} expired sessions`);
+      this.logger.info(`[AIManager] Cleaned up ${expiredSessions.length} expired sessions`);
     }
 
     this.lastCleanup = now;
@@ -668,7 +676,7 @@ class AIManager {
    * @returns {Promise<void>}
    */
   async destroy() {
-    console.log('[AIManager] Destroying all sessions...');
+    this.logger.info('[AIManager] Destroying all sessions...');
     
     const destroyPromises = Array.from(this.sessions.keys()).map(key => 
       this.destroySession(key)
@@ -680,7 +688,7 @@ class AIManager {
     this.isInitialized = false;
     this.initializationPromise = null;
     
-    console.log('[AIManager] All sessions destroyed');
+    this.logger.info('[AIManager] All sessions destroyed');
   }
 
   /**
@@ -736,7 +744,7 @@ class AIManager {
       };
 
     } catch (error) {
-      console.error('[AIManager] Multimodal processing failed:', error);
+      this.logger.error('[AIManager] Multimodal processing failed:', error);
       throw error;
     }
   }
