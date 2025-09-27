@@ -176,19 +176,26 @@ class NetworkHealthChecker {
     const startTime = Date.now();
     
     try {
+      // Usar AbortController para timeout adequado
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+      
       const response = await fetch(url, {
         method: 'HEAD',
-        mode: 'no-cors',
+        mode: 'cors', // Mudado de 'no-cors' para 'cors' para poder ler status
         cache: 'no-cache',
-        timeout: this.config.timeout
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       const latency = Date.now() - startTime;
       
       return {
         url,
         latency,
-        success: true
+        success: response.ok,
+        status: response.status
       };
       
     } catch (error) {
@@ -198,7 +205,7 @@ class NetworkHealthChecker {
         url,
         latency,
         success: false,
-        error: error.message
+        error: error.name === 'AbortError' ? 'timeout' : error.message
       };
     }
   }

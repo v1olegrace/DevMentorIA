@@ -24,7 +24,10 @@ class AIProviderManager {
       fallbackStrategy: 'balanced'
     };
     
-    this.initialize();
+    // Inicialização assíncrona segura
+    this.isInitialized = false;
+    this.initPromise = null;
+    this.initializationError = null;
   }
 
   initializeProviders() {
@@ -76,19 +79,42 @@ class AIProviderManager {
     };
   }
 
+  async ensureInitialized() {
+    if (this.isInitialized) return;
+    if (this.initializationError) throw this.initializationError;
+    if (this.initPromise) return this.initPromise;
+    
+    this.initPromise = this.initialize();
+    
+    try {
+      await this.initPromise;
+      this.isInitialized = true;
+      this.logger.info('[AIProviderManager] AI provider manager initialized successfully');
+    } catch (error) {
+      this.initializationError = error;
+      this.logger.error('[AIProviderManager] Initialization failed:', error);
+      throw error;
+    }
+  }
+
   async initialize() {
     this.logger.info('[AIProviderManager] Initializing AI provider manager');
     
-    // Carregar configurações
-    await this.loadConfig();
-    
-    // Verificar disponibilidade do modelo local
-    await this.checkLocalModelAvailability();
-    
-    // Iniciar limpeza de cache
-    this.startCacheCleanup();
-    
-    this.logger.info('[AIProviderManager] AI provider manager initialized');
+    try {
+      // Carregar configurações
+      await this.loadConfig();
+      
+      // Verificar disponibilidade do modelo local
+      await this.checkLocalModelAvailability();
+      
+      // Iniciar limpeza de cache
+      this.startCacheCleanup();
+      
+      this.logger.info('[AIProviderManager] AI provider manager initialized');
+    } catch (error) {
+      this.logger.error('[AIProviderManager] Initialization error:', error);
+      throw error;
+    }
   }
 
   async loadConfig() {
@@ -175,6 +201,9 @@ class AIProviderManager {
    * Chamada principal para IA
    */
   async callAI(prompt, options = {}) {
+    // Garantir que o sistema está inicializado
+    await this.ensureInitialized();
+    
     const complexity = options.complexity || 'medium';
     const useCache = options.useCache !== false;
     
@@ -256,10 +285,17 @@ class AIProviderManager {
     } catch (error) {
       this.logger.warn(`[AIProviderManager] ${provider.name} failed:`, error.message);
       
-      // Tentar outros provedores se disponíveis
+      // Tentar outros provedores se disponíveis (com limite de tentativas)
       const otherProviders = availableProviders.filter(p => p.name !== provider.name);
+      const maxRetries = this.config.maxRetries || 3;
+      let attempts = 0;
       
       for (const fallbackProvider of otherProviders) {
+        if (attempts >= maxRetries) {
+          this.logger.warn(`[AIProviderManager] Max retries (${maxRetries}) reached, stopping fallback attempts`);
+          break;
+        }
+        
         try {
           const result = await this.callProvider(fallbackProvider, prompt, options);
           
@@ -271,11 +307,19 @@ class AIProviderManager {
             provider: fallbackProvider.name,
             mode: 'online',
             fallback: true,
+            attempts: attempts + 1,
             timestamp: Date.now()
           };
           
         } catch (fallbackError) {
-          this.logger.warn(`[AIProviderManager] ${fallbackProvider.name} fallback failed:`, fallbackError.message);
+          attempts++;
+          this.logger.warn(`[AIProviderManager] ${fallbackProvider.name} fallback attempt ${attempts} failed:`, fallbackError.message);
+          
+          // Delay exponencial entre tentativas (exceto na última)
+          if (attempts < maxRetries) {
+            const delay = Math.min(Math.pow(2, attempts) * 1000, 10000); // Max 10 segundos
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
         }
       }
       

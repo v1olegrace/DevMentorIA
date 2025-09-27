@@ -40,49 +40,88 @@ class DevMentorAIIntegration {
   async initializeSecuritySystems() {
     this.logger.info('[DevMentorAIIntegration] Initializing security systems');
     
+    // Função auxiliar para inicialização segura
+    const safeInitialize = (className, instanceName) => {
+      try {
+        if (typeof window[className] !== 'undefined') {
+          this.systems[instanceName] = new window[className]();
+          this.logger.info(`[DevMentorAIIntegration] ${className} initialized successfully`);
+          return true;
+        } else {
+          this.logger.warn(`[DevMentorAIIntegration] ${className} not available`);
+          return false;
+        }
+      } catch (error) {
+        this.logger.error(`[DevMentorAIIntegration] Failed to initialize ${className}:`, error);
+        return false;
+      }
+    };
+    
     // Sistema de monitoramento de segurança
-    if (typeof SecurityMonitoringSystem !== 'undefined') {
-      this.systems.securityMonitoring = new SecurityMonitoringSystem();
-    }
+    safeInitialize('SecurityMonitoringSystem', 'securityMonitoring');
     
     // Sistema de detecção de anomalias
-    if (typeof AnomalyDetectionSystem !== 'undefined') {
-      this.systems.anomalyDetection = new AnomalyDetectionSystem();
-    }
+    safeInitialize('AnomalyDetectionSystem', 'anomalyDetection');
     
     // Validador de entrada robusto
-    if (typeof RobustInputValidator !== 'undefined') {
-      this.systems.inputValidator = new RobustInputValidator();
-    }
+    safeInitialize('RobustInputValidator', 'inputValidator');
     
-    this.logger.info('[DevMentorAIIntegration] Security systems initialized');
+    this.logger.info('[DevMentorAIIntegration] Security systems initialization completed');
   }
 
   async initializeAISystems() {
     this.logger.info('[DevMentorAIIntegration] Initializing AI systems');
     
-    // Gerenciador de provedores de IA
-    if (typeof AIProviderManager !== 'undefined') {
-      this.systems.aiProvider = new AIProviderManager();
-    }
+    // Função auxiliar para inicialização segura
+    const safeInitialize = (className, instanceName) => {
+      try {
+        if (typeof window[className] !== 'undefined') {
+          this.systems[instanceName] = new window[className]();
+          this.logger.info(`[DevMentorAIIntegration] ${className} initialized successfully`);
+          return true;
+        } else {
+          this.logger.warn(`[DevMentorAIIntegration] ${className} not available`);
+          return false;
+        }
+      } catch (error) {
+        this.logger.error(`[DevMentorAIIntegration] Failed to initialize ${className}:`, error);
+        return false;
+      }
+    };
     
-    this.logger.info('[DevMentorAIIntegration] AI systems initialized');
+    // Gerenciador de provedores de IA
+    safeInitialize('AIProviderManager', 'aiProvider');
+    
+    this.logger.info('[DevMentorAIIntegration] AI systems initialization completed');
   }
 
   async initializeInfrastructureSystems() {
     this.logger.info('[DevMentorAIIntegration] Initializing infrastructure systems');
     
+    // Função auxiliar para inicialização segura
+    const safeInitialize = (className, instanceName) => {
+      try {
+        if (typeof window[className] !== 'undefined') {
+          this.systems[instanceName] = new window[className]();
+          this.logger.info(`[DevMentorAIIntegration] ${className} initialized successfully`);
+          return true;
+        } else {
+          this.logger.warn(`[DevMentorAIIntegration] ${className} not available`);
+          return false;
+        }
+      } catch (error) {
+        this.logger.error(`[DevMentorAIIntegration] Failed to initialize ${className}:`, error);
+        return false;
+      }
+    };
+    
     // Sistema de cache local
-    if (typeof LocalCacheSystem !== 'undefined') {
-      this.systems.cache = new LocalCacheSystem();
-    }
+    safeInitialize('LocalCacheSystem', 'cache');
     
     // Verificador de saúde da rede
-    if (typeof NetworkHealthChecker !== 'undefined') {
-      this.systems.networkHealth = new NetworkHealthChecker();
-    }
+    safeInitialize('NetworkHealthChecker', 'networkHealth');
     
-    this.logger.info('[DevMentorAIIntegration] Infrastructure systems initialized');
+    this.logger.info('[DevMentorAIIntegration] Infrastructure systems initialization completed');
   }
 
   setupSystemIntegrations() {
@@ -261,30 +300,81 @@ class DevMentorAIIntegration {
     try {
       // Verificar cache primeiro
       if (this.systems.cache) {
-        const cached = this.systems.cache.getAIResponse(prompt, options.provider || 'auto');
-        if (cached) {
-          this.logger.debug('[DevMentorAIIntegration] Returning cached AI response');
-          return cached;
+        try {
+          const cached = this.systems.cache.getAIResponse(prompt, options.provider || 'auto');
+          if (cached) {
+            this.logger.debug('[DevMentorAIIntegration] Returning cached AI response');
+            return {
+              success: true,
+              result: cached,
+              provider: 'cache',
+              mode: 'cached',
+              timestamp: Date.now()
+            };
+          }
+        } catch (cacheError) {
+          this.logger.warn('[DevMentorAIIntegration] Cache access failed:', cacheError.message);
         }
       }
       
       // Usar gerenciador de provedores de IA
       if (this.systems.aiProvider) {
-        const result = await this.systems.aiProvider.callAI(prompt, options);
-        
-        // Cachear resultado
-        if (this.systems.cache && result.success) {
-          this.systems.cache.setAIResponse(prompt, result.result, result.provider);
+        try {
+          const result = await this.systems.aiProvider.callAI(prompt, options);
+          
+          // Cachear resultado se bem-sucedido
+          if (this.systems.cache && result.success) {
+            try {
+              this.systems.cache.setAIResponse(prompt, result.result, result.provider);
+            } catch (cacheError) {
+              this.logger.warn('[DevMentorAIIntegration] Failed to cache result:', cacheError.message);
+            }
+          }
+          
+          return result;
+        } catch (providerError) {
+          this.logger.error('[DevMentorAIIntegration] AI provider failed:', providerError);
+          
+          // Fallback para modo offline se disponível
+          if (typeof ai !== 'undefined') {
+            this.logger.info('[DevMentorAIIntegration] Attempting offline fallback');
+            try {
+              const session = await ai.createTextSession({
+                systemPrompt: 'You are DevMentor AI, an expert coding assistant.'
+              });
+              
+              const result = await session.prompt(prompt);
+              
+              return {
+                success: true,
+                result: result,
+                provider: 'chrome-ai',
+                mode: 'offline',
+                fallback: true,
+                timestamp: Date.now()
+              };
+            } catch (offlineError) {
+              this.logger.error('[DevMentorAIIntegration] Offline fallback failed:', offlineError);
+            }
+          }
+          
+          throw providerError;
         }
-        
-        return result;
       } else {
         throw new Error('AI provider system not available');
       }
       
     } catch (error) {
       this.logger.error('[DevMentorAIIntegration] AI call failed:', error);
-      throw new Error(`AI call failed: ${error.message}`);
+      
+      // Retornar erro estruturado em vez de throw
+      return {
+        success: false,
+        error: error.message,
+        provider: 'none',
+        mode: 'failed',
+        timestamp: Date.now()
+      };
     }
   }
 

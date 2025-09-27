@@ -63,36 +63,50 @@ class APIConfigManager {
         'apiStats'
       ]);
       
+      // Função auxiliar para atualizar DOM com verificação
+      const updateElement = (id, value, type = 'value') => {
+        const element = document.getElementById(id);
+        if (element) {
+          if (type === 'value') {
+            element.value = value;
+          } else if (type === 'checked') {
+            element.checked = value;
+          }
+        } else {
+          this.logger.warn(`[APIConfigManager] Element with id '${id}' not found`);
+        }
+      };
+      
       // Carregar chaves
       if (result.openaiKey) {
         this.providers.openai.key = result.openaiKey;
-        document.getElementById('openaiKey').value = result.openaiKey;
+        updateElement('openaiKey', result.openaiKey);
       }
       if (result.claudeKey) {
         this.providers.claude.key = result.claudeKey;
-        document.getElementById('claudeKey').value = result.claudeKey;
+        updateElement('claudeKey', result.claudeKey);
       }
       if (result.geminiKey) {
         this.providers.gemini.key = result.geminiKey;
-        document.getElementById('geminiKey').value = result.geminiKey;
+        updateElement('geminiKey', result.geminiKey);
       }
       if (result.deepseekKey) {
         this.providers.deepseek.key = result.deepseekKey;
-        document.getElementById('deepseekKey').value = result.deepseekKey;
+        updateElement('deepseekKey', result.deepseekKey);
       }
       
       // Carregar configurações
       if (result.fallbackStrategy) {
         this.config.fallbackStrategy = result.fallbackStrategy;
-        document.getElementById('fallbackStrategy').value = result.fallbackStrategy;
+        updateElement('fallbackStrategy', result.fallbackStrategy);
       }
       if (result.enableCache !== undefined) {
         this.config.enableCache = result.enableCache;
-        document.getElementById('enableCache').checked = result.enableCache;
+        updateElement('enableCache', result.enableCache, 'checked');
       }
       if (result.cacheSize) {
         this.config.cacheSize = result.cacheSize;
-        document.getElementById('cacheSize').value = result.cacheSize;
+        updateElement('cacheSize', result.cacheSize);
       }
       
       // Carregar estatísticas

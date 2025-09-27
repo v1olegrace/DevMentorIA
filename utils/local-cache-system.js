@@ -8,6 +8,7 @@ class LocalCacheSystem {
     this.logger = (typeof __DEVMENTOR_LOGGER !== 'undefined') ? __DEVMENTOR_LOGGER : console;
     this.cache = new Map();
     this.accessOrder = [];
+    this.locks = new Map(); // Para evitar race conditions
     this.stats = {
       hits: 0,
       misses: 0,
@@ -234,17 +235,31 @@ class LocalCacheSystem {
   }
 
   delete(key) {
-    const existed = this.cache.has(key);
+    const lockKey = `lock_${key}`;
     
-    if (existed) {
-      this.cache.delete(key);
-      this.removeFromAccessOrder(key);
-      this.stats.deletes++;
-      this.stats.size = this.cache.size;
-      this.logger.debug(`[LocalCacheSystem] Deleted ${key}`);
+    // Verificar se já está sendo processado
+    if (this.locks.has(lockKey)) {
+      this.logger.debug(`[LocalCacheSystem] Key ${key} is locked, skipping delete`);
+      return false;
     }
     
-    return existed;
+    this.locks.set(lockKey, true);
+    
+    try {
+      const existed = this.cache.has(key);
+      
+      if (existed) {
+        this.cache.delete(key);
+        this.removeFromAccessOrder(key);
+        this.stats.deletes++;
+        this.stats.size = this.cache.size;
+        this.logger.debug(`[LocalCacheSystem] Deleted ${key}`);
+      }
+      
+      return existed;
+    } finally {
+      this.locks.delete(lockKey);
+    }
   }
 
   clear() {
