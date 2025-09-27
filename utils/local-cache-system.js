@@ -22,9 +22,16 @@ class LocalCacheSystem {
       maxSize: 1000,
       defaultTTL: 3600000, // 1 hora
       compressionEnabled: true,
+      compressionThreshold: 1024, // Comprimir apenas objetos > 1KB
       persistenceEnabled: true,
-      cleanupInterval: 300000 // 5 minutos
+      cleanupInterval: 300000, // 5 minutos
+      compressionAlgorithm: 'lz-string', // lz-string, gzip, deflate
+      memoryLimit: 50 * 1024 * 1024, // 50MB limite de memória
+      compressionLevel: 6 // Nível de compressão (1-9)
     };
+    
+    this.cleanupInterval = null;
+    this.isDestroyed = false;
     
     this.initialize();
   }
@@ -119,7 +126,11 @@ class LocalCacheSystem {
   }
 
   startCleanup() {
-    setInterval(() => {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    
+    this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, this.config.cleanupInterval);
   }
@@ -153,8 +164,15 @@ class LocalCacheSystem {
   set(key, value, ttl = null) {
     const expiresAt = Date.now() + (ttl || this.config.defaultTTL);
     
-    // Comprimir valor se habilitado
-    const processedValue = this.config.compressionEnabled 
+    // Validar tamanho antes de processar
+    const valueSize = this.calculateValueSize(value);
+    if (valueSize > this.config.memoryLimit) {
+      this.logger.warn(`[LocalCacheSystem] Value too large for ${key}: ${valueSize} bytes`);
+      return false;
+    }
+    
+    // Comprimir valor se habilitado e necessário
+    const processedValue = this.shouldCompress(value) 
       ? this.compress(value) 
       : value;
     
@@ -168,7 +186,10 @@ class LocalCacheSystem {
       value: processedValue,
       expiresAt: expiresAt,
       createdAt: Date.now(),
-      accessCount: 0
+      accessCount: 0,
+      originalSize: valueSize,
+      compressedSize: this.calculateValueSize(processedValue),
+      isCompressed: this.shouldCompress(value)
     });
     
     this.accessOrder.push(key);
@@ -180,7 +201,8 @@ class LocalCacheSystem {
       this.evictLRU();
     }
     
-    this.logger.debug(`[LocalCacheSystem] Set ${key}`);
+    this.logger.debug(`[LocalCacheSystem] Set ${key} (${valueSize} bytes, compressed: ${this.shouldCompress(value)})`);
+    return true;
   }
 
   get(key) {
@@ -529,6 +551,31 @@ class LocalCacheSystem {
       this.logger.error('[LocalCacheSystem] Failed to import cache:', error);
       return false;
     }
+  }
+
+  destroy() {
+    if (this.isDestroyed) return;
+    
+    this.logger.info('[LocalCacheSystem] Destroying cache system');
+    
+    // Limpar interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    
+    // Salvar cache persistente antes de destruir
+    if (this.config.persistenceEnabled) {
+      this.savePersistentCache();
+    }
+    
+    // Limpar cache
+    this.cache.clear();
+    this.accessOrder = [];
+    this.locks.clear();
+    
+    this.isDestroyed = true;
+    this.logger.info('[LocalCacheSystem] Cache system destroyed');
   }
 }
 

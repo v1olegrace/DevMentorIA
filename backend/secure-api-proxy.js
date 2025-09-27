@@ -74,6 +74,35 @@ class SecureAPIProxy {
     });
   }
 
+  // Método otimizado para calcular tamanho de objeto sem JSON.stringify
+  calculateObjectSize(obj, seen = new WeakSet()) {
+    if (obj === null || obj === undefined) return 0;
+    if (typeof obj === 'string') return obj.length * 2; // UTF-16
+    if (typeof obj === 'number') return 8;
+    if (typeof obj === 'boolean') return 4;
+    if (typeof obj === 'function') return 0;
+    
+    if (seen.has(obj)) return 0; // Evitar referências circulares
+    seen.add(obj);
+    
+    let size = 0;
+    
+    if (Array.isArray(obj)) {
+      size += 4; // Overhead do array
+      for (const item of obj) {
+        size += this.calculateObjectSize(item, seen);
+      }
+    } else if (typeof obj === 'object') {
+      size += 8; // Overhead do objeto
+      for (const [key, value] of Object.entries(obj)) {
+        size += key.length * 2; // Chave
+        size += this.calculateObjectSize(value, seen);
+      }
+    }
+    
+    return size;
+  }
+
   setupSecurity() {
     // API Key validation middleware
     this.app.use('/api/proxy', (req, res, next) => {
@@ -100,9 +129,12 @@ class SecureAPIProxy {
         return res.status(400).json({ error: 'Request body is required' });
       }
       
-      // Validate request size
-      if (req.body && JSON.stringify(req.body).length > 1000000) { // 1MB
-        return res.status(413).json({ error: 'Request too large' });
+      // Validate request size - otimizado
+      if (req.body) {
+        const bodySize = this.calculateObjectSize(req.body);
+        if (bodySize > 1000000) { // 1MB
+          return res.status(413).json({ error: 'Request too large' });
+        }
       }
       
       next();

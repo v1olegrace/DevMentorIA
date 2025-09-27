@@ -8,8 +8,35 @@ class DevMentorAIIntegration {
     this.logger = (typeof __DEVMENTOR_LOGGER !== 'undefined') ? __DEVMENTOR_LOGGER : console;
     this.systems = {};
     this.isInitialized = false;
+    this.initPromise = null;
+    this.initializationError = null;
+    this.cleanupIntervals = new Set();
+    this.isDestroyed = false;
     
-    this.initialize();
+    // Não chamar initialize() no constructor
+    // Usar ensureInitialized() quando necessário
+  }
+
+  async ensureInitialized() {
+    if (this.isDestroyed) {
+      throw new Error('System has been destroyed');
+    }
+    
+    if (this.isInitialized) return;
+    if (this.initializationError) throw this.initializationError;
+    if (this.initPromise) return this.initPromise;
+    
+    this.initPromise = this.initialize();
+    
+    try {
+      await this.initPromise;
+      this.isInitialized = true;
+      this.logger.info('[DevMentorAIIntegration] Main integration system initialized successfully');
+    } catch (error) {
+      this.initializationError = error;
+      this.logger.error('[DevMentorAIIntegration] Initialization failed:', error);
+      throw error;
+    }
   }
 
   async initialize() {
@@ -28,11 +55,10 @@ class DevMentorAIIntegration {
       // Configurar integrações entre sistemas
       this.setupSystemIntegrations();
       
-      this.isInitialized = true;
       this.logger.info('[DevMentorAIIntegration] Main integration system initialized successfully');
       
     } catch (error) {
-      this.logger.error('[DevMentorAIIntegration] Initialization failed:', error);
+      this.logger.error('[DevMentorAIIntegration] Initialization error:', error);
       throw error;
     }
   }
@@ -291,9 +317,7 @@ class DevMentorAIIntegration {
   }
 
   async callAI(prompt, options = {}) {
-    if (!this.isInitialized) {
-      throw new Error('System not initialized');
-    }
+    await this.ensureInitialized();
     
     this.logger.info('[DevMentorAIIntegration] Calling AI');
     
@@ -648,6 +672,38 @@ Screenshot data: ${imageData.substring(0, 100)}...`;
     }
     
     this.logger.info('[DevMentorAIIntegration] Cleanup completed');
+  }
+
+  destroy() {
+    if (this.isDestroyed) return;
+    
+    this.logger.info('[DevMentorAIIntegration] Destroying integration system');
+    
+    // Limpar todos os intervals
+    this.cleanupIntervals.forEach(intervalId => {
+      clearInterval(intervalId);
+    });
+    this.cleanupIntervals.clear();
+    
+    // Destruir sistemas filhos
+    Object.values(this.systems).forEach(system => {
+      if (system && typeof system.destroy === 'function') {
+        try {
+          system.destroy();
+        } catch (error) {
+          this.logger.warn('[DevMentorAIIntegration] Error destroying system:', error);
+        }
+      }
+    });
+    
+    // Limpar referências
+    this.systems = {};
+    this.isInitialized = false;
+    this.initPromise = null;
+    this.initializationError = null;
+    this.isDestroyed = true;
+    
+    this.logger.info('[DevMentorAIIntegration] Integration system destroyed');
   }
 }
 

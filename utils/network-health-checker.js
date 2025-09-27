@@ -19,19 +19,65 @@ class NetworkHealthChecker {
       checkInterval: 30000, // 30 segundos
       timeout: 10000, // 10 segundos
       endpoints: [
-        'https://www.google.com',
-        'https://www.cloudflare.com',
-        'https://www.github.com'
+        {
+          url: 'https://www.google.com',
+          type: 'dns',
+          priority: 1,
+          expectedStatus: [200, 301, 302]
+        },
+        {
+          url: 'https://www.cloudflare.com',
+          type: 'cdn',
+          priority: 2,
+          expectedStatus: [200]
+        },
+        {
+          url: 'https://www.github.com',
+          type: 'api',
+          priority: 3,
+          expectedStatus: [200]
+        },
+        {
+          url: 'https://httpbin.org/status/200',
+          type: 'test',
+          priority: 4,
+          expectedStatus: [200]
+        },
+        {
+          url: 'https://api.github.com/zen',
+          type: 'api',
+          priority: 5,
+          expectedStatus: [200]
+        }
       ],
       qualityThresholds: {
         excellent: 100, // ms
         good: 300,
         fair: 1000,
         poor: 3000
+      },
+      retryConfig: {
+        maxRetries: 3,
+        retryDelay: 1000,
+        exponentialBackoff: true
+      },
+      circuitBreaker: {
+        failureThreshold: 5,
+        recoveryTimeout: 30000,
+        halfOpenMaxCalls: 3
       }
     };
     this.listeners = [];
     this.isMonitoring = false;
+    this.monitoringInterval = null;
+    this.circuitBreaker = {
+      state: 'CLOSED', // CLOSED, OPEN, HALF_OPEN
+      failureCount: 0,
+      lastFailureTime: null,
+      nextAttempt: null
+    };
+    this.endpointStats = new Map();
+    this.isDestroyed = false;
     
     this.initialize();
   }
@@ -172,55 +218,177 @@ class NetworkHealthChecker {
     };
   }
 
-  async pingEndpoint(url) {
+  async pingEndpoint(endpoint, retryCount = 0) {
     const startTime = Date.now();
+    const url = typeof endpoint === 'string' ? endpoint : endpoint.url;
+    const expectedStatus = typeof endpoint === 'object' ? endpoint.expectedStatus : [200];
     
     try {
+      // Verificar circuit breaker
+      if (this.circuitBreaker.state === 'OPEN') {
+        if (Date.now() < this.circuitBreaker.nextAttempt) {
+          throw new Error('Circuit breaker is OPEN');
+        } else {
+          this.circuitBreaker.state = 'HALF_OPEN';
+        }
+      }
+      
       // Usar AbortController para timeout adequado
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
       
       const response = await fetch(url, {
         method: 'HEAD',
-        mode: 'cors', // Mudado de 'no-cors' para 'cors' para poder ler status
+        mode: 'cors',
         cache: 'no-cache',
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'User-Agent': 'DevMentorAI/1.0.0'
+        }
       });
       
       clearTimeout(timeoutId);
       
       const latency = Date.now() - startTime;
+      const success = expectedStatus.includes(response.status);
+      
+      // Atualizar estatísticas do endpoint
+      this.updateEndpointStats(url, {
+        success,
+        latency,
+        status: response.status,
+        timestamp: Date.now()
+      });
+      
+      // Atualizar circuit breaker
+      if (success) {
+        this.resetCircuitBreaker();
+      } else {
+        this.recordCircuitBreakerFailure();
+      }
       
       return {
         url,
         latency,
-        success: response.ok,
-        status: response.status
+        success,
+        status: response.status,
+        headers: {
+          'content-type': response.headers.get('content-type'),
+          'server': response.headers.get('server'),
+          'cache-control': response.headers.get('cache-control')
+        },
+        retryCount
       };
       
     } catch (error) {
       const latency = Date.now() - startTime;
       
+      // Retry com backoff exponencial
+      if (retryCount < this.config.retryConfig.maxRetries) {
+        const delay = this.config.retryConfig.exponentialBackoff 
+          ? Math.min(this.config.retryConfig.retryDelay * Math.pow(2, retryCount), 10000)
+          : this.config.retryConfig.retryDelay;
+        
+        this.logger.debug(`[NetworkHealthChecker] Retrying ${url} in ${delay}ms (attempt ${retryCount + 1})`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.pingEndpoint(endpoint, retryCount + 1);
+      }
+      
+      // Atualizar estatísticas do endpoint
+      this.updateEndpointStats(url, {
+        success: false,
+        latency,
+        error: error.name === 'AbortError' ? 'timeout' : error.message,
+        timestamp: Date.now()
+      });
+      
+      // Atualizar circuit breaker
+      this.recordCircuitBreakerFailure();
+      
       return {
         url,
         latency,
         success: false,
-        error: error.name === 'AbortError' ? 'timeout' : error.message
+        error: error.name === 'AbortError' ? 'timeout' : error.message,
+        retryCount
       };
+    }
+  }
+
+  // Métodos auxiliares para circuit breaker
+  resetCircuitBreaker() {
+    this.circuitBreaker.state = 'CLOSED';
+    this.circuitBreaker.failureCount = 0;
+    this.circuitBreaker.lastFailureTime = null;
+    this.circuitBreaker.nextAttempt = null;
+  }
+
+  recordCircuitBreakerFailure() {
+    this.circuitBreaker.failureCount++;
+    this.circuitBreaker.lastFailureTime = Date.now();
+    
+    if (this.circuitBreaker.failureCount >= this.config.circuitBreaker.failureThreshold) {
+      this.circuitBreaker.state = 'OPEN';
+      this.circuitBreaker.nextAttempt = Date.now() + this.config.circuitBreaker.recoveryTimeout;
+      this.logger.warn('[NetworkHealthChecker] Circuit breaker opened due to failures');
+    }
+  }
+
+  updateEndpointStats(url, stats) {
+    if (!this.endpointStats.has(url)) {
+      this.endpointStats.set(url, {
+        totalRequests: 0,
+        successfulRequests: 0,
+        failedRequests: 0,
+        avgLatency: 0,
+        lastSuccess: null,
+        lastFailure: null,
+        consecutiveFailures: 0,
+        consecutiveSuccesses: 0
+      });
+    }
+    
+    const endpointStats = this.endpointStats.get(url);
+    endpointStats.totalRequests++;
+    
+    if (stats.success) {
+      endpointStats.successfulRequests++;
+      endpointStats.lastSuccess = stats.timestamp;
+      endpointStats.consecutiveSuccesses++;
+      endpointStats.consecutiveFailures = 0;
+      
+      // Calcular latência média
+      endpointStats.avgLatency = (endpointStats.avgLatency * (endpointStats.successfulRequests - 1) + stats.latency) / endpointStats.successfulRequests;
+    } else {
+      endpointStats.failedRequests++;
+      endpointStats.lastFailure = stats.timestamp;
+      endpointStats.consecutiveFailures++;
+      endpointStats.consecutiveSuccesses = 0;
     }
   }
 
   async testLatency() {
     const results = [];
     
-    for (const endpoint of this.config.endpoints) {
+    // Ordenar endpoints por prioridade
+    const sortedEndpoints = [...this.config.endpoints].sort((a, b) => a.priority - b.priority);
+    
+    for (const endpoint of sortedEndpoints) {
       try {
         const result = await this.pingEndpoint(endpoint);
         if (result.success) {
           results.push(result.latency);
         }
+        
+        // Se temos sucesso suficiente, podemos parar
+        if (results.length >= 2) {
+          break;
+        }
       } catch (error) {
-        this.logger.debug(`[NetworkHealthChecker] Latency test failed for ${endpoint}:`, error);
+        this.logger.debug(`[NetworkHealthChecker] Latency test failed for ${endpoint.url || endpoint}:`, error);
       }
     }
     
