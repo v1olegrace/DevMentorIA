@@ -47,14 +47,15 @@ class CodeAnalyzer {
       // Detect language
       const language = window.LanguageDetector?.detect(code)?.language || 'javascript';
       
-      // Generate prompt
-      const prompt = this.generatePrompt(code, analysisType, language, options);
+      // Determine analysis strategy based on availability
+      const analysisStrategy = await this.determineAnalysisStrategy(options);
       
-      // Call secure backend proxy
-      const aiResponse = await this.callBackendProxy(prompt, options);
-      
-      // Process response
-      const result = this.processAIResponse(aiResponse, analysisType, code);
+      let result;
+      if (analysisStrategy === 'offline') {
+        result = await this.performOfflineAnalysis(code, analysisType, language, options);
+      } else {
+        result = await this.performOnlineAnalysis(code, analysisType, language, options);
+      }
       
       // Cache result
       this.cacheResult(cacheKey, result);
@@ -65,6 +66,160 @@ class CodeAnalyzer {
       this.logger.error('[CodeAnalyzer] Analysis error:', error);
       return this.getFallbackResponse(code, analysisType, error.message);
     }
+  }
+
+  /**
+   * Determine analysis strategy based on availability and options
+   */
+  async determineAnalysisStrategy(options) {
+    // Check if offline analysis is explicitly requested
+    if (options.forceOffline === true) {
+      return 'offline';
+    }
+    
+    // Check if online analysis is explicitly requested
+    if (options.forceOnline === true) {
+      return 'online';
+    }
+    
+    // Check network availability
+    if (!navigator.onLine) {
+      this.logger.info('[CodeAnalyzer] Offline mode - network unavailable');
+      return 'offline';
+    }
+    
+    // Check if backend proxy is available
+    try {
+      const response = await fetch('/api/proxy/health', { 
+        method: 'GET',
+        timeout: 5000 
+      });
+      if (response.ok) {
+        this.logger.info('[CodeAnalyzer] Online mode - backend proxy available');
+        return 'online';
+      }
+    } catch (error) {
+      this.logger.warn('[CodeAnalyzer] Backend proxy unavailable, falling back to offline');
+    }
+    
+    // Default to offline analysis
+    return 'offline';
+  }
+
+  /**
+   * Perform offline analysis using local AI capabilities
+   */
+  async performOfflineAnalysis(code, analysisType, language, options) {
+    this.logger.info('[CodeAnalyzer] Performing offline analysis');
+    
+    // Use Chrome's built-in AI if available
+    if (typeof ai !== 'undefined' && ai.prompt) {
+      try {
+        const prompt = this.generatePrompt(code, analysisType, language, options);
+        const session = await ai.prompt.create({
+          systemPrompt: this.getSystemPrompt(analysisType, language)
+        });
+        
+        const response = await session.prompt(prompt);
+        
+        return {
+          success: true,
+          result: response,
+          type: analysisType,
+          mode: 'offline',
+          timestamp: Date.now(),
+          metadata: {
+            language,
+            codeLength: code.length,
+            analysisType,
+            processingTime: Date.now() - Date.now()
+          }
+        };
+      } catch (error) {
+        this.logger.warn('[CodeAnalyzer] Chrome AI unavailable:', error);
+      }
+    }
+    
+    // Fallback to local analysis engine
+    return await this.performLocalAnalysis(code, analysisType, language, options);
+  }
+
+  /**
+   * Perform online analysis using backend proxy
+   */
+  async performOnlineAnalysis(code, analysisType, language, options) {
+    this.logger.info('[CodeAnalyzer] Performing online analysis via backend proxy');
+    
+    const prompt = this.generatePrompt(code, analysisType, language, options);
+    
+    // Call secure backend proxy
+    const response = await fetch(this.backendEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code,
+        analysisType,
+        language,
+        options,
+        prompt
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Backend proxy error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    return {
+      success: true,
+      result: result.result,
+      type: analysisType,
+      mode: 'online',
+      timestamp: Date.now(),
+      metadata: {
+        language,
+        codeLength: code.length,
+        analysisType,
+        processingTime: result.metadata?.processingTime || 0
+      }
+    };
+  }
+
+  /**
+   * Perform local analysis using local analysis engine
+   */
+  async performLocalAnalysis(code, analysisType, language, options) {
+    this.logger.info('[CodeAnalyzer] Performing local analysis');
+    
+    // Use local analysis engine if available
+    if (typeof window !== 'undefined' && window.LocalAnalysisEngine) {
+      try {
+        const engine = new window.LocalAnalysisEngine();
+        const result = await engine.analyze(code, analysisType, language, options);
+        
+        return {
+          success: true,
+          result: result,
+          type: analysisType,
+          mode: 'local',
+          timestamp: Date.now(),
+          metadata: {
+            language,
+            codeLength: code.length,
+            analysisType,
+            processingTime: 0
+          }
+        };
+      } catch (error) {
+        this.logger.warn('[CodeAnalyzer] Local analysis engine unavailable:', error);
+      }
+    }
+    
+    // Final fallback - basic analysis
+    return this.performBasicAnalysis(code, analysisType, language, options);
   }
 
   generatePrompt(code, analysisType, language, options = {}) {

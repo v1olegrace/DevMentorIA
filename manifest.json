@@ -42,6 +42,13 @@
         "utils/secure-eval-manager.js",
         "utils/secure-html-sanitizer.js",
         "utils/secure-logger.js",
+        "utils/security-monitoring-system.js",
+        "utils/robust-input-validator.js",
+        "utils/anomaly-detection-system.js",
+        "utils/ai-provider-manager.js",
+        "utils/local-cache-system.js",
+        "utils/network-health-checker.js",
+        "utils/devmentor-ai-integration.js",
         "utils/constants.js",
 <<<<<<< HEAD
         "utils/telemetry-sinks.js",
