@@ -657,6 +657,32 @@ class NetworkHealthChecker {
     
     return recommendations;
   }
+
+  destroy() {
+    if (this.isDestroyed) return;
+    
+    this.logger.info('[NetworkHealthChecker] Destroying network health checker');
+    
+    // Parar monitoramento
+    this.stopMonitoring();
+    
+    // Limpar listeners
+    this.listeners = [];
+    
+    // Limpar estatísticas
+    this.endpointStats.clear();
+    
+    // Reset circuit breaker
+    this.circuitBreaker = {
+      state: 'CLOSED',
+      failureCount: 0,
+      lastFailureTime: null,
+      nextAttempt: null
+    };
+    
+    this.isDestroyed = true;
+    this.logger.info('[NetworkHealthChecker] Network health checker destroyed');
+  }
 }
 
 // Exportar para uso global

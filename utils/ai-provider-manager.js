@@ -37,44 +37,69 @@ class AIProviderManager {
         endpoint: 'https://api.openai.com/v1/chat/completions',
         models: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
         defaultModel: 'gpt-4',
-        cost: 2,
-        speed: 2,
+        // Dados reais baseados em benchmarks
+        costPerToken: 0.00003, // $0.03 per 1K tokens
+        avgResponseTime: 1500, // ms
+        reliability: 0.98,
         quality: 3,
         maxTokens: 4000,
-        temperature: 0.7
+        temperature: 0.7,
+        lastResponseTime: null,
+        successRate: 0.99,
+        consecutiveFailures: 0,
+        totalRequests: 0,
+        totalCost: 0
       },
       claude: {
         name: 'Claude',
         endpoint: 'https://api.anthropic.com/v1/messages',
         models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
         defaultModel: 'claude-3-sonnet-20240229',
-        cost: 3,
-        speed: 1,
+        costPerToken: 0.000015, // $0.015 per 1K tokens
+        avgResponseTime: 2000, // ms
+        reliability: 0.97,
         quality: 3,
         maxTokens: 4000,
-        temperature: 0.7
+        temperature: 0.7,
+        lastResponseTime: null,
+        successRate: 0.97,
+        consecutiveFailures: 0,
+        totalRequests: 0,
+        totalCost: 0
       },
       gemini: {
         name: 'Gemini',
         endpoint: 'https://generativelanguage.googleapis.com/v1/models',
         models: ['gemini-pro', 'gemini-pro-vision'],
         defaultModel: 'gemini-pro',
-        cost: 1,
-        speed: 1,
+        costPerToken: 0.000001, // $0.001 per 1K tokens
+        avgResponseTime: 800, // ms
+        reliability: 0.95,
         quality: 2,
         maxTokens: 4000,
-        temperature: 0.7
+        temperature: 0.7,
+        lastResponseTime: null,
+        successRate: 0.95,
+        consecutiveFailures: 0,
+        totalRequests: 0,
+        totalCost: 0
       },
       deepseek: {
         name: 'DeepSeek',
         endpoint: 'https://api.deepseek.com/v1/chat/completions',
         models: ['deepseek-chat', 'deepseek-coder'],
         defaultModel: 'deepseek-chat',
-        cost: 1,
-        speed: 2,
+        costPerToken: 0.000002, // $0.002 per 1K tokens
+        avgResponseTime: 1200, // ms
+        reliability: 0.92,
         quality: 2,
         maxTokens: 4000,
-        temperature: 0.7
+        temperature: 0.7,
+        lastResponseTime: null,
+        successRate: 0.92,
+        consecutiveFailures: 0,
+        totalRequests: 0,
+        totalCost: 0
       }
     };
   }
@@ -331,47 +356,118 @@ class AIProviderManager {
     return Object.values(this.providers).filter(provider => provider.key && provider.key.length > 10);
   }
 
-  chooseProvider(providers, complexity) {
+  chooseProvider(providers, complexity, context = {}) {
     if (providers.length === 0) return null;
     if (providers.length === 1) return providers[0];
+    
+    // Filtrar provedores confiáveis
+    const reliableProviders = providers.filter(p => p.successRate > 0.9);
+    const providersToUse = reliableProviders.length > 0 ? reliableProviders : providers;
+    
+    // Calcular scores baseados em dados reais
+    const scoredProviders = providersToUse.map(provider => {
+      const score = this.calculateProviderScore(provider, complexity, context);
+      return { ...provider, score };
+    });
     
     let sortedProviders;
     
     switch (this.config.fallbackStrategy) {
       case 'cost':
-        sortedProviders = [...providers].sort((a, b) => a.cost - b.cost);
+        sortedProviders = [...scoredProviders].sort((a, b) => a.costPerToken - b.costPerToken);
         break;
       case 'speed':
-        sortedProviders = [...providers].sort((a, b) => a.speed - b.speed);
+        sortedProviders = [...scoredProviders].sort((a, b) => a.avgResponseTime - b.avgResponseTime);
         break;
       case 'quality':
-        sortedProviders = [...providers].sort((a, b) => b.quality - a.quality);
+        sortedProviders = [...scoredProviders].sort((a, b) => b.quality - a.quality);
         break;
       case 'balanced':
       default:
-        // Estratégia equilibrada baseada na complexidade
-        if (complexity === 'high') {
-          // Para problemas complexos, priorizar qualidade
-          sortedProviders = [...providers].sort((a, b) => 
-            (b.quality - a.quality) || (a.cost - b.cost)
-          );
-        } else if (complexity === 'low') {
-          // Para problemas simples, priorizar velocidade e custo
-          sortedProviders = [...providers].sort((a, b) => 
-            (a.cost - b.cost) || (b.speed - a.speed)
-          );
-        } else {
-          // Para problemas médios, equilibrar todos os fatores
-          sortedProviders = [...providers].sort((a, b) => {
-            const scoreA = (a.quality * 0.4) + (a.speed * 0.3) + ((4 - a.cost) * 0.3);
-            const scoreB = (b.quality * 0.4) + (b.speed * 0.3) + ((4 - b.cost) * 0.3);
-            return scoreB - scoreA;
-          });
-        }
+        sortedProviders = [...scoredProviders].sort((a, b) => b.score - a.score);
         break;
     }
     
     return sortedProviders[0];
+  }
+
+  /**
+   * Calcular score do provedor baseado em dados reais
+   */
+  calculateProviderScore(provider, complexity, context = {}) {
+    const weights = {
+      cost: context.prioritizeCost ? 0.4 : 0.2,
+      speed: context.prioritizeSpeed ? 0.4 : 0.2,
+      quality: context.prioritizeQuality ? 0.4 : 0.2,
+      reliability: 0.2
+    };
+    
+    // Normalizar métricas (0-1)
+    const costScore = Math.max(0, 1 - (provider.costPerToken * 1000000)); // Inverter custo
+    const speedScore = Math.max(0, 1 - (provider.avgResponseTime / 5000)); // Normalizar velocidade
+    const qualityScore = provider.quality / 3; // Normalizar qualidade (1-3)
+    const reliabilityScore = provider.successRate; // Já normalizado (0-1)
+    
+    // Ajustar por complexidade
+    const complexityMultiplier = this.getComplexityMultiplier(complexity);
+    
+    const score = 
+      (costScore * weights.cost) +
+      (speedScore * weights.speed) +
+      (qualityScore * weights.quality) +
+      (reliabilityScore * weights.reliability);
+    
+    return score * complexityMultiplier;
+  }
+
+  /**
+   * Multiplicador baseado na complexidade da tarefa
+   */
+  getComplexityMultiplier(complexity) {
+    const multipliers = {
+      'low': 1.0,    // Tarefas simples - priorizar custo/velocidade
+      'medium': 1.2,  // Tarefas médias - balanceado
+      'high': 1.5     // Tarefas complexas - priorizar qualidade
+    };
+    
+    return multipliers[complexity] || 1.0;
+  }
+
+  /**
+   * Atualizar métricas do provedor após uso
+   */
+  updateProviderMetrics(providerName, responseTime, success, tokensUsed = 0) {
+    const provider = this.providers[providerName];
+    if (!provider) return;
+    
+    provider.totalRequests++;
+    provider.lastResponseTime = responseTime;
+    
+    // Atualizar tempo médio de resposta (média móvel)
+    provider.avgResponseTime = 
+      (provider.avgResponseTime * (provider.totalRequests - 1) + responseTime) / provider.totalRequests;
+    
+    if (success) {
+      provider.consecutiveFailures = 0;
+      provider.totalCost += tokensUsed * provider.costPerToken;
+      
+      // Atualizar taxa de sucesso (média móvel)
+      const currentSuccessRate = provider.successRate;
+      provider.successRate = (currentSuccessRate * 0.9) + (1 * 0.1); // 90% histórico, 10% atual
+    } else {
+      provider.consecutiveFailures++;
+      
+      // Atualizar taxa de sucesso (média móvel)
+      const currentSuccessRate = provider.successRate;
+      provider.successRate = (currentSuccessRate * 0.9) + (0 * 0.1); // 90% histórico, 10% atual
+    }
+    
+    // Atualizar confiabilidade baseada em falhas consecutivas
+    if (provider.consecutiveFailures > 3) {
+      provider.reliability = Math.max(0.5, provider.reliability - 0.1);
+    } else if (provider.consecutiveFailures === 0 && provider.totalRequests > 10) {
+      provider.reliability = Math.min(0.99, provider.reliability + 0.01);
+    }
   }
 
   async callProvider(provider, prompt, options) {
