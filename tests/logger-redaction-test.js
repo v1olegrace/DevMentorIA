@@ -52,3 +52,5 @@ function testLoggerRedaction() {
 // Executar teste
 testLoggerRedaction();
 
+
+

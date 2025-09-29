@@ -3,8 +3,8 @@
  * Handles context menus, message passing, and AI coordination
  */
 
-// Import AI Manager
-importScripts('ai-manager.js');
+// Import AI Session Manager
+importScripts('ai-session-manager.js');
 
 class DevMentorServiceWorker {
   constructor() {
@@ -36,8 +36,8 @@ class DevMentorServiceWorker {
       // Create context menus
       await this.createContextMenus();
       
-      // Initialize AI Manager
-      await self.aiManager.initialize();
+      // Initialize AI Session Manager
+      await self.aiSessionManager.initialize();
       
       this.isInitialized = true;
       this.logger.info('DevMentor AI initialized successfully');
@@ -232,7 +232,7 @@ class DevMentorServiceWorker {
       const language = await this.detectLanguage(info.selectionText, info.pageUrl);
 
       // Process with AI
-      const result = await self.aiManager.processRequest(type, info.selectionText, {
+      const result = await self.aiSessionManager.processCodeWithChaining(info.selectionText, type, {
         language: language.language,
         context: `URL: ${info.pageUrl}`,
         pageTitle: tab.title
@@ -359,9 +359,10 @@ class DevMentorServiceWorker {
         message: 'Analyzing screenshot...'
       });
 
-      // Process with AI
-      const result = await self.aiManager.processMultimodalRequest(base64Image, {
-        mediaType
+      // Process with AI (multimodal - screenshot analysis)
+      const result = await self.aiSessionManager.processCodeWithChaining('', 'screenshot', {
+        imageData: base64Image,
+        mediaType: mediaType
       });
 
       // Send result
@@ -568,7 +569,7 @@ class DevMentorServiceWorker {
     this.logger.info('Extension suspending...');
     
     // Clean up resources
-    await self.aiManager.destroy();
+    await self.aiSessionManager.shutdown();
     this.activeRequests.clear();
   }
 
@@ -639,7 +640,7 @@ class DevMentorServiceWorker {
    * @returns {Object} AI status information
    */
   async getAIStatus() {
-    return await self.aiManager.getHealthStatus();
+    return await self.aiSessionManager.getMetrics();
   }
 
   /**

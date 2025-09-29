@@ -12,6 +12,10 @@ class AISessionManager {
     this.circuitBreakers = new Map();
     this.metrics = new Map();
     
+    // Advanced timeout system integration
+    this.timeoutManager = null; // Will be initialized after dependencies are loaded
+    this.uxTimeoutManager = null; // Will be set when UI manager is available
+    
     // Configuration optimized for Chrome extension environment
     this.config = {
       maxSessions: 5, // Reduced for extension memory limits
@@ -48,24 +52,87 @@ class AISessionManager {
       performanceAnalytics: true
     };
     
+    // Initialize basic logger if not available
+    this.logger = this.logger || {
+      info: (...args) => console.info('[AISessionManager]', ...args),
+      warn: (...args) => console.warn('[AISessionManager]', ...args),
+      error: (...args) => console.error('[AISessionManager]', ...args)
+    };
+    
     this.initialize();
   }
 
   /**
-   * PRODUCTION-GRADE INITIALIZATION
-   * Implements proper service worker lifecycle with health checks
+   * PRODUCTION-GRADE INITIALIZATION COM TIMEOUT ESTRATIFICADO
+   * Implements proper service worker lifecycle with multi-layer timeout protection
    */
   async initialize() {
     if (this.initializationPromise) return this.initializationPromise;
     
-    this.initializationPromise = this._performInitialization();
+    this.initializationPromise = this._performInitializationWithTimeout();
     return this.initializationPromise;
+  }
+
+  async _performInitializationWithTimeout() {
+    // CAMADA 1: Timeout de inicialização total
+    const INIT_TIMEOUT = 15000; // 15s máximo para inicializar
+    
+    const initPromise = this._performInitialization();
+    const timeoutPromise = this._createTimeoutPromise(INIT_TIMEOUT, 'initialization');
+    
+    try {
+      return await Promise.race([initPromise, timeoutPromise]);
+    } catch (error) {
+      if (error instanceof TimeoutError || error.name === 'TimeoutError') {
+        // Fallback: inicialização em modo degradado
+        console.warn('[AISessionManager] Full initialization timed out, falling back to degraded mode');
+        return await this._initializeDegradedMode();
+      }
+      throw error;
+    }
+  }
+
+  _createTimeoutPromise(timeout, operation) {
+    return new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new TimeoutError(`${operation} timed out after ${timeout}ms`, {
+          operation,
+          timeout,
+          timestamp: Date.now()
+        }));
+      }, timeout);
+    });
+  }
+
+  async _initializeDegradedMode() {
+    console.warn('[AISessionManager] Initializing in degraded mode...');
+    this.state = 'DEGRADED';
+    
+    // Initialize with minimal functionality
+    try {
+      // Only initialize timeout manager if available
+      if (typeof AdvancedTimeoutManager !== 'undefined') {
+        this.timeoutManager = new AdvancedTimeoutManager();
+      }
+      
+      console.log('[AISessionManager] Degraded mode initialization complete');
+      return true;
+    } catch (error) {
+      console.error('[AISessionManager] Degraded mode initialization failed:', error);
+      this.state = 'ERROR';
+      throw error;
+    }
   }
 
   async _performInitialization() {
     try {
       this.logger.info('[AISessionManager] Starting production initialization...');
       this.state = 'INITIALIZING';
+      
+      // 0. Initialize timeout manager if available
+      if (typeof AdvancedTimeoutManager !== 'undefined') {
+        this.timeoutManager = new AdvancedTimeoutManager();
+      }
       
       // 1. Check Chrome AI availability with detailed diagnostics
       const availability = await this._checkAIAvailabilityDetailed();
@@ -215,13 +282,36 @@ class AISessionManager {
   }
 
   /**
-   * GOOGLE-OPTIMIZED PROMPT CHAINING
-   * Sophisticated multi-step analysis
+   * GOOGLE-OPTIMIZED PROMPT CHAINING COM TIMEOUT AVANÇADO
+   * Sophisticated multi-step analysis with enterprise-grade timeout protection
    */
   async processCodeWithChaining(code, analysisType, options = {}) {
     const performanceStart = performance.now();
     const requestId = this._generateRequestId();
     
+    // Context para sistema de timeout
+    const timeoutContext = {
+      operation: this._mapAnalysisTypeToOperation(analysisType),
+      requestId,
+      codeLength: code.length,
+      complexity: this._assessCodeComplexity(code),
+      analysisType,
+      retryCount: 0
+    };
+    
+    // Execute com proteção de timeout multi-layer (se disponível)
+    if (this.timeoutManager) {
+      return await this.timeoutManager.executeWithTimeout(
+        () => this._executeChainedAnalysis(code, analysisType, options, requestId, performanceStart),
+        timeoutContext
+      );
+    } else {
+      // Fallback sem timeout manager
+      return await this._executeChainedAnalysis(code, analysisType, options, requestId, performanceStart);
+    }
+  }
+
+  async _executeChainedAnalysis(code, analysisType, options, requestId, performanceStart) {
     try {
       // Check cache first
       const cached = this._getCachedResult(code, analysisType);
@@ -548,6 +638,140 @@ class AISessionManager {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  /**
+   * TIMEOUT SYSTEM INTEGRATION METHODS
+   * Métodos para integração com sistema avançado de timeout
+   */
+  _mapAnalysisTypeToOperation(analysisType) {
+    const operationMap = {
+      'explain': 'promptSimple',
+      'debug': 'promptMedium', 
+      'optimize': 'promptComplex',
+      'review': 'promptMedium',
+      'document': 'promptMedium',
+      'test': 'promptComplex',
+      'refactor': 'promptComplex',
+      'screenshot': 'multimodal',
+      'video': 'videoGeneration',
+      'diagram': 'diagramGeneration'
+    };
+    
+    return operationMap[analysisType] || 'promptMedium';
+  }
+
+  _assessCodeComplexity(code) {
+    const length = code.length;
+    const lines = code.split('\n').length;
+    const complexityIndicators = [
+      /function\s+\w+/g,    // Functions
+      /class\s+\w+/g,       // Classes
+      /if\s*\(/g,           // Conditionals
+      /for\s*\(/g,          // Loops
+      /while\s*\(/g,        // While loops
+      /try\s*{/g,           // Try-catch
+      /async\s+/g,          // Async operations
+      /await\s+/g,          // Await calls
+      /Promise\./g,         // Promise usage
+      /callback/gi,         // Callbacks
+      /recursive/gi         // Recursion mentions
+    ];
+    
+    let complexityScore = 0;
+    complexityIndicators.forEach(pattern => {
+      const matches = code.match(pattern);
+      if (matches) complexityScore += matches.length;
+    });
+    
+    // Normalize by length
+    const normalizedComplexity = complexityScore / lines;
+    
+    if (length < 100 && normalizedComplexity < 0.5) return 'simple';
+    if (length < 500 && normalizedComplexity < 1.0) return 'medium';
+    return 'complex';
+  }
+
+  /**
+   * INTEGRATION WITH UX TIMEOUT MANAGER
+   */
+  setUIManager(uiManager) {
+    if (typeof UXTimeoutManager !== 'undefined') {
+      this.uxTimeoutManager = new UXTimeoutManager(uiManager);
+    }
+  }
+
+  async processCodeWithUXProtection(code, analysisType, options = {}) {
+    if (!this.uxTimeoutManager) {
+      // Fallback para processamento sem UX protection
+      return await this.processCodeWithChaining(code, analysisType, options);
+    }
+
+    const context = {
+      operation: this._mapAnalysisTypeToOperation(analysisType),
+      codeLength: code.length,
+      analysisType
+    };
+
+    return await this.uxTimeoutManager.executeWithUXProtection(
+      () => this.processCodeWithChaining(code, analysisType, options),
+      context
+    );
+  }
+
+  /**
+   * TIMEOUT METRICS AND MONITORING
+   */
+  getTimeoutMetrics() {
+    const baseMetrics = {
+      systemMetrics: null,
+      activeOperations: 0,
+      circuitBreakerStatus: Array.from(this.circuitBreakers.entries()).map(([type, cb]) => ({
+        type,
+        state: cb.getState(),
+        failures: cb.getFailureCount()
+      })),
+      poolHealth: Array.from(this.pools.entries()).map(([type, pool]) => ({
+        type,
+        active: pool.activeConnections,
+        idle: pool.idleConnections.size,
+        pending: pool.pendingRequests.size
+      }))
+    };
+
+    if (this.timeoutManager) {
+      baseMetrics.systemMetrics = this.timeoutManager.getMetrics();
+      baseMetrics.activeOperations = this.timeoutManager.getActiveOperationsCount();
+    }
+
+    return baseMetrics;
+  }
+
+  /**
+   * EMERGENCY OPERATIONS
+   */
+  cancelAllOperations() {
+    if (this.timeoutManager) {
+      this.timeoutManager.cancelAllOperations();
+    }
+    console.log('[AISessionManager] All operations cancelled due to emergency stop');
+  }
+
+  async performEmergencyShutdown() {
+    console.log('[AISessionManager] Starting emergency shutdown...');
+    
+    // Cancel all active operations
+    this.cancelAllOperations();
+    
+    // Close all circuit breakers
+    this.circuitBreakers.forEach(cb => {
+      cb.state = 'OPEN';
+    });
+    
+    // Shutdown connection pools
+    await this.shutdown();
+    
+    console.log('[AISessionManager] Emergency shutdown complete');
+  }
+
   _timeout(ms) {
     return new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Timeout')), ms)
@@ -872,5 +1096,7 @@ class CircuitBreakerOpenError extends Error {
 
 // Export singleton
 self.aiSessionManager = new AISessionManager();
+
+
 
 

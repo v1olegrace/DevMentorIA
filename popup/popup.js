@@ -478,6 +478,7 @@ if (document.readyState === 'loading') {
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 
@@ -487,3 +488,7 @@ if (document.readyState === 'loading') {
 
 =======
 >>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
+=======
+
+
+>>>>>>> 515fa31 (Normalize line endings)

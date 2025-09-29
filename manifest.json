@@ -65,15 +65,19 @@
         "utils/language-detector.js",
 >>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
         "utils/error-handler.js",
+        "utils/advanced-timeout-system.js",
+        "utils/media-rich-explainer.js",
         "content/code-analyzer.js",
         "content/screenshot-handler.js",
         "content/ui-manager.js",
+        "content/premium-ui-manager.js",
         "content/content-script.js"
       ],
       "css": [
         "assets/styles/main.css",
         "assets/styles/sidebar.css", 
-        "assets/styles/animations.css"
+        "assets/styles/animations.css",
+        "assets/styles/premium-features.css"
       ],
       "run_at": "document_end"
     }
@@ -83,18 +87,18 @@
     "default_popup": "popup/popup.html",
     "default_title": "DevMentor AI - Coding Assistant",
     "default_icon": {
-      "16": "assets/icons/icon16.png",
-      "32": "assets/icons/icon32.png",
-      "48": "assets/icons/icon48.png",
-      "128": "assets/icons/icon128.png"
+      "16": "assets/icons/icon16.svg",
+      "32": "assets/icons/icon32.svg",
+      "48": "assets/icons/icon48.svg",
+      "128": "assets/icons/icon128.svg"
     }
   },
   
   "icons": {
-    "16": "assets/icons/icon16.png",
-    "32": "assets/icons/icon32.png", 
-    "48": "assets/icons/icon48.png",
-    "128": "assets/icons/icon128.png"
+    "16": "assets/icons/icon16.svg",
+    "32": "assets/icons/icon32.svg", 
+    "48": "assets/icons/icon48.svg",
+    "128": "assets/icons/icon128.svg"
   },
   
   "web_accessible_resources": [
@@ -102,7 +106,10 @@
       "resources": [
         "assets/templates/*.js",
         "assets/styles/*.css",
-        "assets/icons/*.png"
+        "assets/icons/*.svg",
+        "assets/icons/*.png",
+        "examples/*.html",
+        "examples/*.js"
       ],
       "matches": ["<all_urls>"]
     }

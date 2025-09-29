@@ -247,15 +247,9 @@ devmentor-ai-v2.0.0.zip
 
 ## ⚙️ Requirements
 
-- Chrome Canary 127+ with AI flags enabled
+- Chrome Canary 120+ with AI flags enabled
 - AI flags: `chrome://flags/#optimization-guide-on-device-model`
 
-## 🏆 Awards & Recognition
-
-- 🥇 **Google Hackathon 2024** - Winner
-- 🏅 **Best Privacy-First Extension** - Chrome Web Store
-- ⭐ **5.0 Rating** - Chrome Web Store
-- 📈 **100K+ Downloads** - First month
 
 ---
 
@@ -568,6 +562,7 @@ Follow this guide to successfully deploy DevMentor AI and reach developers world
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 
@@ -577,3 +572,7 @@ Follow this guide to successfully deploy DevMentor AI and reach developers world
 
 =======
 >>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
+=======
+
+
+>>>>>>> 515fa31 (Normalize line endings)

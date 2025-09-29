@@ -25,4 +25,12 @@
   
   <!-- AI indicator -->
   <text x="64" y="100" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold" opacity="0.8">AI</text>
+<<<<<<< HEAD
 </svg>
+=======
+</svg>
+
+
+
+
+>>>>>>> 515fa31 (Normalize line endings)

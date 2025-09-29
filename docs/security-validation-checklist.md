@@ -136,8 +136,8 @@ Se qualquer um dos seguintes for encontrado, **NÃO FAZER DEPLOY**:
 ## 📞 **Contatos de Emergência**
 
 - **Lead Developer:** Mauro de Oliveira Cardoso (maurulycan@gmail.com)
-- **Security Team:** security@devmentor-ai.com
-- **Operations:** ops@devmentor-ai.com
+- **Security Team:** Mauro de Oliveira Cardoso (maurulycan@gmail.com)
+- **Operations:** Mauro de Oliveira Cardoso (maurulycan@gmail.com)
 
 ---
 

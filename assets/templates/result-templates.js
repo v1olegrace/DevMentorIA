@@ -35,6 +35,7 @@ window.ResultTemplates = {
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 
@@ -44,3 +45,7 @@ window.ResultTemplates = {
 
 =======
 >>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
+=======
+
+
+>>>>>>> 515fa31 (Normalize line endings)

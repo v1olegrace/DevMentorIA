@@ -424,3 +424,5 @@ if (typeof module !== 'undefined' && module.exports) {
 // Exportar para uso global
 window.evalManager = evalManager;
 
+
+

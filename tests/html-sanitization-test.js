@@ -74,3 +74,5 @@ function testHTMLSanitization() {
 // Executar teste
 testHTMLSanitization();
 
+
+

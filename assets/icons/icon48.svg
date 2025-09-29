@@ -10,4 +10,12 @@
   <path d="M24 6C14.06 6 6 14.06 6 24s8.06 18 18 18 18-8.06 18-18S33.94 6 24 6zm-3 27l-9-9 4.24-4.24L21 21.51l10.76-10.76L36 15l-15 15z" fill="white"/>
   <circle cx="24" cy="24" r="3" fill="#34a853" opacity="0.9"/>
   <path d="M20 20h8v8h-8z" fill="white" opacity="0.2"/>
+<<<<<<< HEAD
 </svg>
+=======
+</svg>
+
+
+
+
+>>>>>>> 515fa31 (Normalize line endings)

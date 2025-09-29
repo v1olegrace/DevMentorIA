@@ -741,6 +741,7 @@ This architecture provides a solid foundation for current functionality while en
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 
@@ -750,3 +751,7 @@ This architecture provides a solid foundation for current functionality while en
 
 =======
 >>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
+=======
+
+
+>>>>>>> 515fa31 (Normalize line endings)
