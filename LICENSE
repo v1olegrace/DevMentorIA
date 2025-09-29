@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2024 DevMentor AI
+Copyright (c) 2024 DevMentor AI Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,35 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+---
 
+## Third-Party Licenses
 
+This project uses the following third-party services and libraries:
 
+### AI Services
+- **Google Gemini API**: Subject to Google's terms of service
+- **Anthropic Claude API**: Subject to Anthropic's terms of service  
+- **OpenAI API**: Subject to OpenAI's terms of service
+- **Chrome Built-in AI**: Subject to Google Chrome's terms
+
+### Development Dependencies
+- **Chrome Extension APIs**: Subject to Google's Chrome Web Store terms
+- Various open-source JavaScript libraries (see individual file headers)
+
+### Academic Sources Integration
+- **IEEE Xplore**: Academic content subject to IEEE terms
+- **ACM Digital Library**: Academic content subject to ACM terms
+- **Google Scholar**: Academic search subject to Google's terms
+
+## Commercial Use
+
+This software is provided under MIT license for the hackathon and educational purposes.
+For commercial use of the premium features and AI integrations, please ensure compliance
+with all third-party service terms and obtain appropriate API licenses.
+
+## Contact
+
+For questions about licensing or commercial use:
+- Email: maurulycan@gmail.com
+- GitHub: [Repository URL will be added after creation]
