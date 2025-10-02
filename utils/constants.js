@@ -3,8 +3,9 @@
  * Centralized configuration for the entire extension
  */
 
-// Extension Configuration
-window.DEVMENTOR_CONFIG = {
+// Extension Configuration - Safe namespace
+if (!window.DEVMENTOR_CONFIG) {
+  window.DEVMENTOR_CONFIG = {
   
   // Extension Info
   APP_NAME: 'DevMentor AI',
@@ -255,8 +256,9 @@ window.DEVMENTOR_CONFIG = {
     TEAM_SHARING: false, // Future feature
     CUSTOM_PROMPTS: false // Future feature
   }
-};
+  };
 
-// Freeze the configuration to prevent modifications
-Object.freeze(window.DEVMENTOR_CONFIG);
+  // Freeze the configuration to prevent modifications
+  Object.freeze(window.DEVMENTOR_CONFIG);
+}
 

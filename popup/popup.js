@@ -10,6 +10,14 @@ class DevMentorPopup {
     this.aiStatus = null;
     this.stats = null;
     
+    // Initialize logger
+    this.logger = {
+      debug: (...args) => console.debug('[Popup]', ...args),
+      info: (...args) => console.info('[Popup]', ...args),
+      warn: (...args) => console.warn('[Popup]', ...args),
+      error: (...args) => console.error('[Popup]', ...args)
+    };
+    
     this.init();
   }
 

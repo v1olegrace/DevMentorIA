@@ -50,20 +50,8 @@
         "utils/network-health-checker.js",
         "utils/devmentor-ai-integration.js",
         "utils/constants.js",
-<<<<<<< HEAD
-        "utils/telemetry-sinks.js",
-        "utils/privacy-sanitizer.js",
-        "utils/observability-manager.js",
-        "utils/alerting-system.js",
-        "utils/siem-integration.js",
-        "utils/telemetry-dashboard.js",
-        "utils/observability-demo.js",
-        "utils/helpers.js",
-        "utils/language-detector.js", 
-=======
         "utils/helpers.js", 
         "utils/language-detector.js",
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
         "utils/error-handler.js",
         "utils/advanced-timeout-system.js",
         "utils/media-rich-explainer.js",
@@ -116,8 +104,7 @@
   ],
   
   "content_security_policy": {
-<<<<<<< HEAD
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com;"
+    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; media-src 'self' data:;"
   },
   
   "minimum_chrome_version": "127",
@@ -138,7 +125,7 @@
         "default": "Ctrl+Shift+D", 
         "mac": "Command+Shift+D"
       },
-      "description": "🐛 Debug and analyze code issues"
+      "description": "Debug and analyze code issues"
     },
     "refactor-code": {
       "suggested_key": {
@@ -152,69 +139,12 @@
         "default": "Ctrl+Shift+M",
         "mac": "Command+Shift+M"
       },
-      "description": "📱 Toggle DevMentor AI sidebar"
-    },
-    "collaborate": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+C",
-        "mac": "Command+Shift+C"
-      },
-      "description": "Start collaborative code review"
-    },
-    "open-telemetry": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+T",
-        "mac": "Command+Shift+T"
-      },
-      "description": "Open telemetry dashboard"
+      "description": "Toggle DevMentor AI sidebar"
     }
   },
   
   "options_ui": {
-    "page": "popup/popup.html",
+    "page": "options/options.html",
     "open_in_tab": false
-  },
-  
-  "externally_connectable": {
-    "matches": [
-      "https://github.com/*",
-      "https://gitlab.com/*",
-      "https://bitbucket.org/*",
-      "https://codepen.io/*",
-      "https://jsfiddle.net/*",
-      "https://codesandbox.io/*",
-      "https://replit.com/*",
-      "https://stackoverflow.com/*",
-      "https://stackexchange.com/*",
-      "https://leetcode.com/*",
-      "https://hackerrank.com/*",
-      "https://developer.mozilla.org/*",
-      "https://docs.google.com/*",
-      "https://colab.research.google.com/*",
-      "http://localhost/*",
-      "https://localhost/*"
-    ]
-  },
-  
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  
-  "oauth2": {
-    "client_id": "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/drive.file",
-      "https://www.googleapis.com/auth/userinfo.email"
-    ]
-  },
-  
-  "chrome_url_overrides": {
-    "newtab": "popup/popup.html"
-  },
-  
-  "devtools_page": "devtools/devtools.html"
-}
-=======
-    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; media-src 'self' data:;"
   }
 }
-
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

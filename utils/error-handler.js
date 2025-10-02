@@ -20,7 +20,7 @@ class DevMentorError extends Error {
 }
 
 // Error types for different scenarios
-export const ERROR_TYPES = {
+const ERROR_TYPES = {
   // AI API Errors
   AI_UNAVAILABLE: 'ai_unavailable',
   AI_TIMEOUT: 'ai_timeout',
@@ -51,7 +51,7 @@ export const ERROR_TYPES = {
 };
 
 // Error severity levels
-export const ERROR_SEVERITY = {
+const ERROR_SEVERITY = {
   LOW: 'low',
   MEDIUM: 'medium',
   HIGH: 'high',
@@ -378,8 +378,7 @@ window.addEventListener('unhandledrejection', (event) => {
 export default errorHandler;
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+ HEAD
 
 
 
@@ -387,9 +386,5 @@ export default errorHandler;
 
 
 
-=======
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
-=======
+b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
 
-
->>>>>>> 515fa31 (Normalize line endings)
