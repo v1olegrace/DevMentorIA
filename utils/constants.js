@@ -183,8 +183,8 @@ window.DEVMENTOR_CONFIG = {
   CONTEXT_MENU: {
     EXPLAIN: {
       id: 'devmentor-explain',
-      title: '🧠 Explain Code',
-      icon: '🧠'
+      title: 'Explain Code',
+      icon: 'AI'
     },
     DEBUG: {
       id: 'devmentor-debug',
@@ -193,13 +193,13 @@ window.DEVMENTOR_CONFIG = {
     },
     DOCUMENT: {
       id: 'devmentor-document',
-      title: '📝 Generate Documentation', 
-      icon: '📝'
+      title: 'Generate Documentation', 
+      icon: 'Doc'
     },
     REFACTOR: {
       id: 'devmentor-refactor',
-      title: '⚡ Suggest Refactoring',
-      icon: '⚡'
+      title: 'Suggest Refactoring',
+      icon: 'Opt'
     },
     SCREENSHOT: {
       id: 'devmentor-screenshot',

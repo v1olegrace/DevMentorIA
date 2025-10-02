@@ -4,7 +4,7 @@
 
 This project was developed for a hackathon focusing on AI-powered developer tools. We welcome contributions that enhance the educational and enterprise-grade aspects of the extension.
 
-## 🚀 Quick Start for Contributors
+## Quick Start for Contributors
 
 ### Prerequisites
 - Chrome Browser (Canary recommended for AI features)
@@ -21,7 +21,7 @@ This project was developed for a hackathon focusing on AI-powered developer tool
 5. Make changes and test
 ```
 
-## 🎯 Areas for Contribution
+## Areas for Contribution
 
 ### High Priority
 - **AI Integration**: Improve Gemini video generation prompts
@@ -78,7 +78,7 @@ perf: optimize video generation
 - Execute `demonstrateTimeoutSystem()`
 - Verify all documentation renders correctly
 
-## 📝 Documentation
+## Documentation
 
 When contributing:
 - Update relevant .md files in `docs/`
@@ -95,7 +95,7 @@ Include:
 - Expected vs actual behavior
 - Console logs (if applicable)
 
-## 💡 Feature Requests
+## Feature Requests
 
 Include:
 - Problem you're solving
@@ -123,4 +123,4 @@ Contributors will be recognized in:
 - Release notes
 - Project documentation
 
-Thank you for helping make DevMentor AI better! 🚀
+Thank you for helping make DevMentor AI better!

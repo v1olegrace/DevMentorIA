@@ -107,7 +107,7 @@ class DevMentorServiceWorker {
       const menuItems = [
         {
           id: 'devmentor-explain',
-          title: '🧠 Explain Code',
+          title: 'Explain Code',
           contexts: ['selection'],
           documentUrlPatterns: ['<all_urls>']
         },
@@ -119,13 +119,13 @@ class DevMentorServiceWorker {
         },
         {
           id: 'devmentor-document',
-          title: '📝 Generate Documentation',
+          title: 'Generate Documentation',
           contexts: ['selection'], 
           documentUrlPatterns: ['<all_urls>']
         },
         {
           id: 'devmentor-refactor',
-          title: '⚡ Suggest Refactoring',
+          title: 'Suggest Refactoring',
           contexts: ['selection'],
           documentUrlPatterns: ['<all_urls>']
         },

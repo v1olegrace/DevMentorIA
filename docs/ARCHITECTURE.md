@@ -1,4 +1,4 @@
-# 🏗️ DevMentor AI - Architecture Documentation
+# DevMentor AI - Architecture Documentation
 
 > **Comprehensive architecture guide for DevMentor AI Chrome Extension**
 
@@ -8,7 +8,7 @@ DevMentor AI is built with an **enterprise-grade architecture** that prioritizes
 
 ---
 
-## 🎯 **Architecture Principles**
+## Architecture Principles
 
 ### **Core Design Principles**
 
@@ -21,15 +21,15 @@ DevMentor AI is built with an **enterprise-grade architecture** that prioritizes
 
 ### **Architecture Goals**
 
-- ✅ **Zero Data Transmission** - Code never leaves the device
-- ✅ **High Availability** - 99.9% uptime with circuit breakers
-- ✅ **Low Latency** - <2s response time for all operations
-- ✅ **Resource Efficiency** - <50MB memory usage
-- ✅ **Error Recovery** - Automatic retry and fallback mechanisms
+- Zero Data Transmission - Code never leaves the device
+- High Availability - 99.9% uptime with circuit breakers
+- Low Latency - <2s response time for all operations
+- Resource Efficiency - <50MB memory usage
+- Error Recovery - Automatic retry and fallback mechanisms
 
 ---
 
-## 🏛️ **System Architecture**
+## System Architecture
 
 ### **High-Level Architecture**
 
@@ -125,7 +125,7 @@ graph LR
 
 ---
 
-## 🔧 **Core Components**
+## Core Components
 
 ### **1. AI Session Manager**
 
@@ -335,7 +335,7 @@ sequenceDiagram
 
 ---
 
-## 🛡️ **Security Architecture**
+## Security Architecture
 
 ### **Security Layers**
 
@@ -389,7 +389,7 @@ graph TB
 
 ---
 
-## ⚡ **Performance Architecture**
+## Performance Architecture
 
 ### **Performance Optimization Strategies**
 
@@ -433,7 +433,7 @@ graph LR
 
 ---
 
-## 🔧 **Error Handling Architecture**
+## Error Handling Architecture
 
 ### **Error Handling Strategy**
 
@@ -575,7 +575,7 @@ graph TB
 
 ---
 
-## 🚀 **Deployment Architecture**
+## Deployment Architecture
 
 ### **Deployment Strategy**
 
@@ -617,7 +617,7 @@ graph TB
 
 ---
 
-## 📊 **Monitoring Architecture**
+## Monitoring Architecture
 
 ### **Monitoring Strategy**
 
@@ -740,8 +740,7 @@ This architecture provides a solid foundation for current functionality while en
 **Architecture designed for the future of AI-powered development! 🏗️✨**
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+ HEAD
 
 
 
@@ -749,9 +748,5 @@ This architecture provides a solid foundation for current functionality while en
 
 
 
-=======
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
-=======
 
-
->>>>>>> 515fa31 (Normalize line endings)
+ b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

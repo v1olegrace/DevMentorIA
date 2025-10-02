@@ -8,7 +8,7 @@ DevMentor AI provides a comprehensive API for code analysis, AI processing, and 
 
 ---
 
-## 🏗️ **Architecture**
+## Architecture
 
 ### **Core Components**
 
@@ -107,7 +107,7 @@ const result = await aiManager.processCodeWithChaining(
 
 ---
 
-## 🔍 **Code Analyzer API**
+## Code Analyzer API
 
 ### **Core Class: CodeAnalyzer**
 
@@ -247,7 +247,7 @@ const result = await screenshotHandler._processImage(file);
 
 ---
 
-## 🎨 **UI Manager API**
+## UI Manager API
 
 ### **Core Class: UIManager**
 
@@ -311,7 +311,7 @@ await uiManager.showModal(modalContent, {
 
 ---
 
-## 🔧 **Chrome Extension APIs**
+## Chrome Extension APIs
 
 ### **Manifest V3 Integration**
 
@@ -375,7 +375,7 @@ chrome.scripting.executeScript({
 
 ---
 
-## 🔒 **Error Handling API**
+## Error Handling API
 
 ### **ErrorHandler Class**
 
@@ -427,7 +427,7 @@ try {
 
 ---
 
-## 📊 **Performance Monitoring API**
+## Performance Monitoring API
 
 ### **Metrics Collection**
 
@@ -511,7 +511,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 ---
 
-## 🎯 **Configuration API**
+## Configuration API
 
 ### **Settings Management**
 
@@ -592,7 +592,7 @@ const mockAnalysis = CodeAnalyzer.generateMockAnalysis('javascript');
 
 ---
 
-## 📈 **Analytics API**
+## Analytics API
 
 ### **Usage Tracking**
 
@@ -677,7 +677,7 @@ const securityScan = await analyzer.analyzeSecurity(code);
 
 ---
 
-## 🚀 **Advanced Usage**
+## Advanced Usage
 
 ### **Custom Analysis Pipeline**
 
@@ -780,7 +780,7 @@ async function screenshotAnalysisWorkflow(imageFile) {
 
 ---
 
-## 🔧 **Development**
+## Development
 
 ### **Building from Source**
 
@@ -835,21 +835,16 @@ npm run test:e2e
 
 ---
 
-**Happy coding with DevMentor AI! 🧠✨**
+Happy coding with DevMentor AI!
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-
+ HEAD
 
 
 
 
 
-=======
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
-=======
 
 
->>>>>>> 515fa31 (Normalize line endings)
+
+ b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

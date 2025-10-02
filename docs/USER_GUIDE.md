@@ -2,7 +2,7 @@
 
 > **Complete guide to using DevMentor AI Chrome Extension**
 
-## 🚀 **Getting Started**
+## Getting Started
 
 ### **Installation**
 
@@ -27,11 +27,11 @@
 1. **Visit a coding website** (GitHub, Stack Overflow, etc.)
 2. **Select any code snippet**
 3. **Right-click** and choose "Explain with DevMentor AI"
-4. **Watch the magic happen!** ✨
+4. Watch the magic happen!
 
 ---
 
-## 🎯 **Core Features**
+## Core Features
 
 ### **1. Code Explanation**
 
@@ -123,7 +123,7 @@ const expensiveOperation = (data) => {
 ```
 
 **DevMentor AI Response:**
-> ⚡ **Performance Optimization**
+> Performance Optimization
 > 
 > **Current:** Two separate array iterations
 > **Optimized:** Single iteration with reduce
@@ -161,7 +161,7 @@ function processUserData(userData, options = {}) {
 ```
 
 **DevMentor AI Response:**
-> 📝 **Generated Documentation**
+> Generated Documentation
 > 
 > ```javascript
 > /**
@@ -210,7 +210,7 @@ function processUserData(userData, options = {}) {
 
 ---
 
-## ⚙️ **Settings & Configuration**
+## Settings & Configuration
 
 ### **Accessing Settings**
 
@@ -231,7 +231,7 @@ function processUserData(userData, options = {}) {
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| **Local Processing** | All analysis happens locally | ✅ On |
+| Local Processing | All analysis happens locally | On |
 | **Analytics** | Anonymous usage data | ❌ Off |
 | **Cache Duration** | How long to keep results | 24 hours |
 
@@ -246,7 +246,7 @@ function processUserData(userData, options = {}) {
 
 ---
 
-## ⌨️ **Keyboard Shortcuts**
+## Keyboard Shortcuts
 
 | Shortcut | Action | Description |
 |----------|--------|-------------|
@@ -261,7 +261,7 @@ function processUserData(userData, options = {}) {
 ## 🌐 **Supported Websites**
 
 ### **Code Repositories**
-- ✅ GitHub (github.com)
+- GitHub (github.com)
 - ✅ GitLab (gitlab.com)
 - ✅ Bitbucket (bitbucket.org)
 
@@ -488,8 +488,7 @@ For advanced users:
 **Happy coding with DevMentor AI! 🧠✨**
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+ HEAD
 
 
 
@@ -497,9 +496,5 @@ For advanced users:
 
 
 
-=======
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
-=======
 
-
->>>>>>> 515fa31 (Normalize line endings)
+ b285e24 ( HOTFIX: Aplicar correções críticas de segurança)

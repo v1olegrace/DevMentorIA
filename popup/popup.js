@@ -436,12 +436,12 @@ Built for the Chrome Built-in AI Challenge 2025.
     if (!status) return 'Unknown';
     
     if (status.initialized && status.aiAvailable) {
-      return 'Ready to help! 🚀';
+      return 'Ready to help!';
     }
     if (status.initialized && !status.aiAvailable) {
-      return 'AI features unavailable 😔';
+      return 'AI features unavailable';
     }
-    return 'Starting up... ⏳';
+    return 'Starting up...';
   }
 
   /**
@@ -477,8 +477,8 @@ if (document.readyState === 'loading') {
 
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+ HEAD
+ HEAD
 
 
 
@@ -486,9 +486,9 @@ if (document.readyState === 'loading') {
 
 
 
-=======
->>>>>>> b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
-=======
+
+ b285e24 ( HOTFIX: Aplicar correções críticas de segurança)
 
 
->>>>>>> 515fa31 (Normalize line endings)
+
+515fa31 (Normalize line endings)

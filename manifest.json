@@ -131,7 +131,7 @@
         "default": "Ctrl+Shift+E",
         "mac": "Command+Shift+E"
       },
-      "description": "🧠 Explain selected code with AI"
+      "description": "Explain selected code with AI"
     },
     "debug-code": {
       "suggested_key": {
@@ -145,7 +145,7 @@
         "default": "Ctrl+Shift+R",
         "mac": "Command+Shift+R"
       },
-      "description": "⚡ Refactor code with Google best practices"
+      "description": "Refactor code with Google best practices"
     },
     "toggle-sidebar": {
       "suggested_key": {
@@ -159,14 +159,14 @@
         "default": "Ctrl+Shift+C",
         "mac": "Command+Shift+C"
       },
-      "description": "👥 Start collaborative code review"
+      "description": "Start collaborative code review"
     },
     "open-telemetry": {
       "suggested_key": {
         "default": "Ctrl+Shift+T",
         "mac": "Command+Shift+T"
       },
-      "description": "📊 Open telemetry dashboard"
+      "description": "Open telemetry dashboard"
     }
   },
   

@@ -1,7 +1,7 @@
 {
   "name": "devmentor-ai-chrome-extension",
   "version": "2.0.0",
-  "description": "🧠 Enterprise-grade AI coding assistant powered by Chrome's Built-in AI. Complete privacy, offline-first, with Google best practices integration.",
+  "description": "Enterprise-grade AI coding assistant powered by Chrome's Built-in AI. Complete privacy, offline-first, with Google best practices integration.",
   "author": "DevMentor AI Team <team@devmentor.ai>",
   "license": "MIT",
   "homepage": "https://devmentor.ai",
@@ -133,7 +133,7 @@
     "manifest": {
       "version": "2.0.0",
       "name": "DevMentor AI - Enterprise Code Assistant",
-      "description": "🚀 Enterprise-grade AI coding assistant powered by Chrome's Built-in AI. Complete privacy, offline-first, with Google best practices integration.",
+      "description": "Enterprise-grade AI coding assistant powered by Chrome's Built-in AI. Complete privacy, offline-first, with Google best practices integration.",
       "permissions": [
         "activeTab",
         "contextMenus",
