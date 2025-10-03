@@ -116,6 +116,9 @@ class DevMentorServiceWorker {
     // Context menu clicks
     chrome.contextMenus.onClicked.addListener(this.handleContextMenuClick.bind(this));
 
+    // Keyboard shortcuts (chrome.commands)
+    chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
+
     // Message handling
     chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
 
@@ -219,6 +222,58 @@ class DevMentorServiceWorker {
 
     } catch (error) {
       this.logger.error('Failed to create context menus:', error);
+    }
+  }
+
+  /**
+   * Handle keyboard commands (chrome.commands)
+   * @param {string} command - Command name
+   * @param {Object} tab - Current tab
+   */
+  async handleCommand(command, tab) {
+    this.logger.info('Keyboard command triggered:', command);
+
+    try {
+      // Track usage
+      await this.trackUsage('keyboard_command', { command });
+
+      // Inject content script if needed
+      await this.injectContentScriptIfNeeded(tab.id);
+
+      // Get selected text from active tab
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => window.getSelection().toString().trim()
+      });
+
+      const selectedText = result?.result || '';
+
+      if (!selectedText) {
+        this.logger.warn('No text selected for command');
+        return;
+      }
+
+      // Handle different commands
+      switch (command) {
+        case 'explain-code':
+          await this.handleCodeAnalysis('explain', { selectionText: selectedText }, tab);
+          break;
+        case 'debug-code':
+          await this.handleCodeAnalysis('debug', { selectionText: selectedText }, tab);
+          break;
+        case 'document-code':
+          await this.handleCodeAnalysis('document', { selectionText: selectedText }, tab);
+          break;
+        case 'refactor-code':
+          await this.handleCodeAnalysis('refactor', { selectionText: selectedText }, tab);
+          break;
+        default:
+          this.logger.warn('Unknown command:', command);
+      }
+
+    } catch (error) {
+      this.logger.error('Command handling failed:', error);
+      await this.sendErrorToTab(tab.id, error);
     }
   }
 

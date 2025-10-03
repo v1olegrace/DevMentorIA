@@ -44,10 +44,8 @@ class DevMentorContentScript {
       return true; // Keep message channel open
     });
 
-    // Handle keyboard shortcuts
-    document.addEventListener('keydown', (event) => {
-      this.handleKeyboardShortcuts(event);
-    });
+    // Keyboard shortcuts are now handled by chrome.commands in service worker
+    // No need for content script keyboard handling
   }
 
   /**
@@ -117,44 +115,8 @@ class DevMentorContentScript {
     };
   }
 
-  /**
-   * Handle keyboard shortcuts (Demo)
-   */
-  handleKeyboardShortcuts(event) {
-    // Ctrl+Shift+E: Explain code
-    if (event.ctrlKey && event.shiftKey && event.key === 'E') {
-      event.preventDefault();
-      this.triggerAnalysis('explain');
-    }
-    
-    // Ctrl+Shift+D: Debug code
-    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-      event.preventDefault();
-      this.triggerAnalysis('debug');
-    }
-  }
-
-  /**
-   * Trigger analysis (Demo)
-   */
-  async triggerAnalysis(type) {
-    const code = this.getSelectedText();
-    if (!code) {
-      this.logger.warn('No code selected');
-      return;
-    }
-
-    try {
-      const result = await this.analyzeCodeDemo(code, type);
-      this.logger.info('Analysis completed:', result);
-      
-      // Show demo notification
-      this.showDemoNotification(type, result.result);
-      
-    } catch (error) {
-      this.logger.error('Analysis failed:', error);
-    }
-  }
+  // Keyboard shortcuts are now handled by chrome.commands in service worker
+  // This provides better reliability and avoids conflicts
 
   /**
    * Show demo notification
