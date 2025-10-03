@@ -7,7 +7,8 @@
   "permissions": [
     "activeTab",
     "contextMenus",
-    "storage"
+    "storage",
+    "scripting"
   ],
   
   "host_permissions": [
@@ -20,13 +21,6 @@
     "service_worker": "background/service-worker.js"
   },
   
-  "content_scripts": [
-    {
-      "matches": ["https://github.com/*", "https://stackoverflow.com/*"],
-      "js": ["content/content-script.js"],
-      "run_at": "document_end"
-    }
-  ],
   
   "action": {
     "default_popup": "popup/popup.html",

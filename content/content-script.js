@@ -57,6 +57,11 @@ class DevMentorContentScript {
     this.logger.debug('Received message:', request);
     
     switch (request.action) {
+      case 'ping':
+        // Respond to ping for injection detection
+        sendResponse({ success: true, injected: true });
+        break;
+        
       case 'getSelectedCode':
         sendResponse({ 
           success: true, 

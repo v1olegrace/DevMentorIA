@@ -64,6 +64,48 @@ class DevMentorServiceWorker {
   }
 
   /**
+   * Inject content script dynamically using chrome.scripting
+   * @param {number} tabId - Tab ID to inject into
+   */
+  async injectContentScriptIfNeeded(tabId) {
+    try {
+      // Check if content script is already injected
+      const isInjected = await this.isContentScriptInjected(tabId);
+      
+      if (!isInjected) {
+        this.logger.info('Injecting content script dynamically');
+        
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['content/content-script.js']
+        });
+        
+        this.logger.info('Content script injected successfully');
+      }
+      
+    } catch (error) {
+      this.logger.error('Failed to inject content script:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if content script is already injected
+   * @param {number} tabId - Tab ID to check
+   * @returns {boolean} - Whether script is injected
+   */
+  async isContentScriptInjected(tabId) {
+    try {
+      // Try to communicate with content script
+      const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+      return response && response.success;
+    } catch (error) {
+      // If communication fails, script is not injected
+      return false;
+    }
+  }
+
+  /**
    * Set up event listeners
    */
   setupEventListeners() {
@@ -227,6 +269,9 @@ class DevMentorServiceWorker {
     if (!info.selectionText) {
       throw new Error('No code selected');
     }
+
+    // Inject content script dynamically only when needed
+    await this.injectContentScriptIfNeeded(tab.id);
 
     const requestId = this.generateRequestId();
     this.activeRequests.set(requestId, {
