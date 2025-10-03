@@ -1,170 +1,135 @@
 /**
- * DevMentor AI - Service Worker (Background Script)
+ * DevMentor AI - Service Worker (ES6 Module Compatible)
  * Handles context menus, message passing, and AI coordination
+ * Optimized for service worker lifecycle management
  */
+
+// Import ES6 modules (compatible with "type": "module")
+import { MessageHandler } from './modules/message-handler.js';
+import { ContextMenuManager } from './modules/context-menu.js';
+import { StorageManager } from './modules/storage.js';
+import { ChromeAI } from './modules/chrome-ai.js';
 
 class DevMentorServiceWorker {
   constructor() {
+    // Service worker lifecycle state
     this.isInitialized = false;
-    this.contextMenus = new Map();
+    this.isShuttingDown = false;
+    
+    // Modules (will be initialized)
+    this.modules = null;
+    
+    // Ephemeral state (will be lost on termination)
     this.activeRequests = new Map();
+    this.cleanupTasks = new Set();
     
-    // Initialize secure logger
-    this.logger = {
-      debug: (...args) => console.debug('[ServiceWorker]', ...args),
-      info: (...args) => console.info('[ServiceWorker]', ...args),
-      warn: (...args) => console.warn('[ServiceWorker]', ...args),
-      error: (...args) => console.error('[ServiceWorker]', ...args)
+    // Persistent state (stored in chrome.storage)
+    this.persistentState = {
+      contextMenusCreated: false,
+      lastCleanup: 0,
+      sessionId: null
     };
-    
-    this.init();
   }
 
-  /**
-   * Initialize service worker
-   */
-  async init() {
-    this.logger.info('Starting DevMentor AI...');
+  async initialize() {
+    if (this.isInitialized) {
+      return;
+    }
 
     try {
-      // Set up event listeners
-      this.setupEventListeners();
+      console.log('[ServiceWorker] Initializing with ES6 modules...');
       
-      // Create context menus
-      await this.createContextMenus();
+      // Load persistent state
+      await this.loadPersistentState();
       
-      // Initialize AI Session Manager (mock for demo)
-      this.initializeAISession();
+      // Initialize modules
+      this.modules = {
+        storage: new StorageManager(),
+        messages: new MessageHandler(),
+        contextMenus: new ContextMenuManager(),
+        chromeAI: new ChromeAI()
+      };
+      
+      // Initialize modules
+      await this.modules.storage.initialize();
+      await this.modules.chromeAI.initialize();
+      
+      // Set up event handlers
+      await this.setupEventHandlers();
+      
+      // Set up context menus (only if not already created)
+      if (!this.persistentState.contextMenusCreated) {
+        await this.setupContextMenus();
+        this.persistentState.contextMenusCreated = true;
+        await this.savePersistentState();
+      }
+      
+      // Set up cleanup alarm
+      await this.setupCleanupAlarm();
       
       this.isInitialized = true;
-      this.logger.info('DevMentor AI initialized successfully');
+      console.log('[ServiceWorker] ✅ Initialized successfully');
+      
+      // Track initialization
+      await this.trackEvent('service_worker_initialized');
       
     } catch (error) {
-      this.logger.error('Initialization failed:', error);
-    }
-  }
-
-  /**
-   * Initialize AI Session (Mock for Demo)
-   */
-  initializeAISession() {
-    this.logger.info('Initializing AI Session Manager (Demo Mode)');
-    // Mock AI session for hackathon demo
-    this.aiSessionManager = {
-      initialized: true,
-      available: true,
-      processCode: async (code, type) => {
-        return {
-          success: true,
-          result: `Demo ${type} result for: ${code.substring(0, 50)}...`,
-          timestamp: new Date().toISOString()
-        };
-      }
-    };
-  }
-
-  /**
-   * Inject content script dynamically using chrome.scripting
-   * @param {number} tabId - Tab ID to inject into
-   */
-  async injectContentScriptIfNeeded(tabId) {
-    try {
-      // Check if content script is already injected
-      const isInjected = await this.isContentScriptInjected(tabId);
-      
-      if (!isInjected) {
-        this.logger.info('Injecting content script dynamically');
-        
-        await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ['content/content-script.js']
-        });
-        
-        this.logger.info('Content script injected successfully');
-      }
-      
-    } catch (error) {
-      this.logger.error('Failed to inject content script:', error);
+      console.error('[ServiceWorker] ❌ Initialization failed:', error);
+      await this.handleInitializationError(error);
       throw error;
     }
   }
 
-  /**
-   * Check if content script is already injected
-   * @param {number} tabId - Tab ID to check
-   * @returns {boolean} - Whether script is injected
-   */
-  async isContentScriptInjected(tabId) {
+  async loadPersistentState() {
     try {
-      // Try to communicate with content script
-      const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' });
-      return response && response.success;
+      const result = await chrome.storage.local.get(['persistentState']);
+      if (result.persistentState) {
+        this.persistentState = { ...this.persistentState, ...result.persistentState };
+      }
+      
+      // Generate session ID if not exists
+      if (!this.persistentState.sessionId) {
+        this.persistentState.sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await this.savePersistentState();
+      }
     } catch (error) {
-      // If communication fails, script is not injected
-      return false;
+      console.error('[ServiceWorker] Failed to load persistent state:', error);
     }
   }
 
-  /**
-   * Set up event listeners
-   */
-  setupEventListeners() {
-    // Extension installation/startup
-    chrome.runtime.onInstalled.addListener(this.handleInstall.bind(this));
-    chrome.runtime.onStartup.addListener(this.handleStartup.bind(this));
+  async savePersistentState() {
+    try {
+      await chrome.storage.local.set({ persistentState: this.persistentState });
+    } catch (error) {
+      console.error('[ServiceWorker] Failed to save persistent state:', error);
+    }
+  }
 
-    // Context menu clicks
-    chrome.contextMenus.onClicked.addListener(this.handleContextMenuClick.bind(this));
-
-    // Keyboard shortcuts (chrome.commands)
+  async setupEventHandlers() {
+    // Message handlers
+    this.modules.messages.on('explain-code', this.handleExplainCode.bind(this));
+    this.modules.messages.on('debug-code', this.handleDebugCode.bind(this));
+    this.modules.messages.on('document-code', this.handleDocumentCode.bind(this));
+    this.modules.messages.on('refactor-code', this.handleRefactorCode.bind(this));
+    this.modules.messages.on('inject-sidebar', this.handleInjectSidebar.bind(this));
+    this.modules.messages.on('keep-alive', this.handleKeepAlive.bind(this));
+    
+    // Command handlers
     chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
-
-    // Message handling
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-
-    // Tab updates (for cleanup)
-    chrome.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
-    chrome.tabs.onUpdated.addListener(this.handleTabUpdated.bind(this));
-
-    // Extension suspend/resume
+    
+    // Context menu handlers
+    chrome.contextMenus.onClicked.addListener(this.handleContextMenuClick.bind(this));
+    
+    // Alarm handlers
+    chrome.alarms.onAlarm.addListener(this.handleAlarm.bind(this));
+    
+    // Runtime handlers
+    chrome.runtime.onMessage.addListener(this.handleRuntimeMessage.bind(this));
     chrome.runtime.onSuspend.addListener(this.handleSuspend.bind(this));
   }
 
-  /**
-   * Handle extension installation
-   * @param {Object} details - Installation details
-   */
-  async handleInstall(details) {
-    this.logger.info('Extension installed:', details.reason);
-
-    if (details.reason === 'install') {
-      // First installation
-      await this.showWelcomeNotification();
-      await this.trackInstallation();
-    } else if (details.reason === 'update') {
-      // Extension updated
-      await this.handleUpdate(details.previousVersion);
-    }
-  }
-
-  /**
-   * Handle extension startup
-   */
-  async handleStartup() {
-    this.logger.info('Extension startup');
-    await this.trackUsage('startup');
-  }
-
-  /**
-   * Create context menus
-   */
-  async createContextMenus() {
+  async setupContextMenus() {
     try {
-      // Remove existing menus
-      await chrome.contextMenus.removeAll();
-      this.contextMenus.clear();
-
-      // Define menu items
       const menuItems = [
         {
           id: 'devmentor-explain',
@@ -182,8 +147,24 @@ class DevMentorServiceWorker {
           ]
         },
         {
-          id: 'devmentor-debug', 
-          title: 'Find Bugs & Issues',
+          id: 'devmentor-debug',
+          title: 'Debug Code',
+          contexts: ['selection'],
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
+        },
+        {
+          id: 'devmentor-document',
+          title: 'Generate Documentation',
           contexts: ['selection'],
           documentUrlPatterns: [
             'https://github.com/*',
@@ -197,23 +178,8 @@ class DevMentorServiceWorker {
           ]
         },
         {
-          id: 'devmentor-document',
-          title: 'Generate Documentation',
-          contexts: ['selection'], 
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
-        },
-        {
           id: 'devmentor-refactor',
-          title: 'Suggest Refactoring',
+          title: 'Refactor Code',
           contexts: ['selection'],
           documentUrlPatterns: [
             'https://github.com/*',
@@ -240,61 +206,145 @@ class DevMentorServiceWorker {
             'https://jsfiddle.net/*',
             'https://codesandbox.io/*'
           ]
-        },
-        {
-          id: 'devmentor-screenshot',
-          title: 'Analyze Screenshot',
-          contexts: ['page'],
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
         }
       ];
 
       // Create menu items
       for (const item of menuItems) {
-        await new Promise((resolve, reject) => {
-          chrome.contextMenus.create(item, () => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              this.contextMenus.set(item.id, item);
-              resolve();
-            }
-          });
-        });
+        await this.modules.contextMenus.create(item);
       }
-
-      this.logger.info('Context menus created successfully');
-
+      
+      console.log('[ServiceWorker] ✅ Context menus created');
+      
     } catch (error) {
-      this.logger.error('Failed to create context menus:', error);
+      console.error('[ServiceWorker] ❌ Context menu setup failed:', error);
+      throw error;
     }
   }
 
-  /**
-   * Handle keyboard commands (chrome.commands)
-   * @param {string} command - Command name
-   * @param {Object} tab - Current tab
-   */
-  async handleCommand(command, tab) {
-    this.logger.info('Keyboard command triggered:', command);
-
+  async setupCleanupAlarm() {
     try {
-      // Track usage
-      await this.trackUsage('keyboard_command', { command });
+      await chrome.alarms.create('storage-cleanup', { periodInMinutes: 60 });
+      console.log('[ServiceWorker] ✅ Cleanup alarm created');
+    } catch (error) {
+      console.error('[ServiceWorker] ❌ Failed to create cleanup alarm:', error);
+    }
+  }
 
+  // Message handlers
+  async handleExplainCode(request, sender, sendResponse) {
+    const requestId = this.generateRequestId();
+    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'explain' });
+    
+    try {
+      const result = await this.modules.chromeAI.explainCode(request.code, request.context);
+      
+      await this.trackEvent('code_explained', { 
+        codeLength: request.code.length,
+        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
+      });
+      
+      sendResponse({ success: true, data: result });
+    } catch (error) {
+      console.error('[ServiceWorker] Explain code failed:', error);
+      await this.trackEvent('code_explain_failed', { error: error.message });
+      sendResponse({ success: false, error: error.message });
+    } finally {
+      this.activeRequests.delete(requestId);
+    }
+  }
+
+  async handleDebugCode(request, sender, sendResponse) {
+    const requestId = this.generateRequestId();
+    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'debug' });
+    
+    try {
+      const result = await this.modules.chromeAI.debugCode(request.code, request.context);
+      
+      await this.trackEvent('code_debugged', { 
+        codeLength: request.code.length,
+        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
+      });
+      
+      sendResponse({ success: true, data: result });
+    } catch (error) {
+      console.error('[ServiceWorker] Debug code failed:', error);
+      await this.trackEvent('code_debug_failed', { error: error.message });
+      sendResponse({ success: false, error: error.message });
+    } finally {
+      this.activeRequests.delete(requestId);
+    }
+  }
+
+  async handleDocumentCode(request, sender, sendResponse) {
+    const requestId = this.generateRequestId();
+    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'document' });
+    
+    try {
+      const result = await this.modules.chromeAI.generateDocumentation(request.code, request.context);
+      
+      await this.trackEvent('documentation_generated', { 
+        codeLength: request.code.length,
+        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
+      });
+      
+      sendResponse({ success: true, data: result });
+    } catch (error) {
+      console.error('[ServiceWorker] Document code failed:', error);
+      await this.trackEvent('documentation_failed', { error: error.message });
+      sendResponse({ success: false, error: error.message });
+    } finally {
+      this.activeRequests.delete(requestId);
+    }
+  }
+
+  async handleRefactorCode(request, sender, sendResponse) {
+    const requestId = this.generateRequestId();
+    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'refactor' });
+    
+    try {
+      const result = await this.modules.chromeAI.refactorCode(request.code, request.context);
+      
+      await this.trackEvent('code_refactored', { 
+        codeLength: request.code.length,
+        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
+      });
+      
+      sendResponse({ success: true, data: result });
+    } catch (error) {
+      console.error('[ServiceWorker] Refactor code failed:', error);
+      await this.trackEvent('refactor_failed', { error: error.message });
+      sendResponse({ success: false, error: error.message });
+    } finally {
+      this.activeRequests.delete(requestId);
+    }
+  }
+
+  async handleInjectSidebar(request, sender, sendResponse) {
+    try {
+      await this.injectSidebar(sender.tab.id);
+      await this.trackEvent('sidebar_injected', { tabId: sender.tab.id });
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('[ServiceWorker] Sidebar injection failed:', error);
+      await this.trackEvent('sidebar_injection_failed', { error: error.message });
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async handleKeepAlive(request, sender, sendResponse) {
+    sendResponse({ success: true, timestamp: Date.now() });
+  }
+
+  // Command handler
+  async handleCommand(command, tab) {
+    try {
+      console.log(`[ServiceWorker] Command received: ${command}`);
+      
       // Inject content script if needed
       await this.injectContentScriptIfNeeded(tab.id);
-
-      // Get selected text from active tab
+      
+      // Get selected text
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => window.getSelection().toString().trim()
@@ -303,7 +353,7 @@ class DevMentorServiceWorker {
       const selectedText = result?.result || '';
 
       if (!selectedText) {
-        this.logger.warn('No text selected for command');
+        console.warn('[ServiceWorker] No text selected for command');
         return;
       }
 
@@ -322,530 +372,247 @@ class DevMentorServiceWorker {
           await this.handleCodeAnalysis('refactor', { selectionText: selectedText }, tab);
           break;
         default:
-          this.logger.warn('Unknown command:', command);
+          console.warn(`[ServiceWorker] Unknown command: ${command}`);
       }
-
+      
+      await this.trackEvent('command_executed', { command, hasSelection: !!selectedText });
+      
     } catch (error) {
-      this.logger.error('Command handling failed:', error);
-      await this.sendErrorToTab(tab.id, error);
+      console.error(`[ServiceWorker] Command ${command} failed:`, error);
+      await this.trackEvent('command_failed', { command, error: error.message });
     }
   }
 
-  /**
-   * Handle context menu clicks
-   * @param {Object} info - Click info
-   * @param {Object} tab - Tab info
-   */
+  // Context menu handler
   async handleContextMenuClick(info, tab) {
-    this.logger.info('Context menu clicked:', info.menuItemId);
-
     try {
-      // Track usage
-      await this.trackUsage('context_menu', { action: info.menuItemId });
-
-      // Handle different menu actions
-      switch (info.menuItemId) {
-        case 'devmentor-explain':
-          await this.handleCodeAnalysis('explain', info, tab);
-          break;
-        case 'devmentor-debug':
-          await this.handleCodeAnalysis('debug', info, tab);
-          break;
-        case 'devmentor-document':
-          await this.handleCodeAnalysis('document', info, tab);
-          break;
-        case 'devmentor-refactor':
-          await this.handleCodeAnalysis('refactor', info, tab);
-          break;
-        case 'devmentor-screenshot':
-          await this.handleScreenshotAnalysis(info, tab);
-          break;
+      console.log(`[ServiceWorker] Context menu clicked: ${info.menuItemId}`);
+      
+      if (info.menuItemId.startsWith('devmentor-')) {
+        const action = info.menuItemId.replace('devmentor-', '');
+        
+        await this.injectContentScriptIfNeeded(tab.id);
+        
+        await chrome.tabs.sendMessage(tab.id, {
+          action: `${action}-selection`,
+          code: info.selectionText,
+          context: { url: tab.url }
+        });
+        
+        await this.trackEvent('context_menu_used', { 
+          action, 
+          hasSelection: !!info.selectionText 
+        });
       }
-
     } catch (error) {
-      this.logger.error('Context menu handling failed:', error);
-      await this.sendErrorToTab(tab.id, error);
+      console.error('[ServiceWorker] Context menu handler failed:', error);
     }
   }
 
-  /**
-   * Handle code analysis requests
-   * @param {string} type - Analysis type
-   * @param {Object} info - Context menu info
-   * @param {Object} tab - Tab info
-   */
-  async handleCodeAnalysis(type, info, tab) {
-    if (!info.selectionText) {
-      throw new Error('No code selected');
+  // Alarm handler
+  async handleAlarm(alarm) {
+    if (alarm.name === 'storage-cleanup') {
+      await this.performCleanup();
     }
+  }
 
-    // Inject content script dynamically only when needed
-    await this.injectContentScriptIfNeeded(tab.id);
+  // Runtime message handler
+  async handleRuntimeMessage(message, sender, sendResponse) {
+    if (message.action === 'keep-alive') {
+      // Return a promise to keep the service worker alive
+      return true;
+    }
+    
+    // Delegate to message handler
+    if (this.modules?.messages) {
+      return this.modules.messages.handleMessage(message, sender, sendResponse);
+    }
+    
+    return false;
+  }
 
-    const requestId = this.generateRequestId();
-    this.activeRequests.set(requestId, {
-      type,
-      tabId: tab.id,
-      startTime: Date.now()
-    });
+  // Suspend handler (service worker termination)
+  async handleSuspend() {
+    console.log('[ServiceWorker] Service worker suspending...');
+    this.isShuttingDown = true;
+    await this.performCleanup();
+    this.destroy();
+  }
 
+  // Utility methods
+  async injectContentScriptIfNeeded(tabId) {
     try {
-      // Send loading state to content script
-      await this.sendToTab(tab.id, {
-        action: 'showLoading',
-        requestId,
-        type,
-        message: this.getLoadingMessage(type)
-      });
+      const isInjected = await this.isContentScriptInjected(tabId);
+      
+      if (!isInjected) {
+        console.log('[ServiceWorker] Injecting content script dynamically');
+        
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['content/content-script.js']
+        });
+        
+        console.log('[ServiceWorker] ✅ Content script injected successfully');
+      }
+      
+    } catch (error) {
+      console.error('[ServiceWorker] ❌ Failed to inject content script:', error);
+      throw error;
+    }
+  }
 
-      // Detect programming language
-      const language = await this.detectLanguage(info.selectionText, info.pageUrl);
-
-      // Process with AI
-      const result = await self.aiSessionManager.processCodeWithChaining(info.selectionText, type, {
-        language: language.language,
-        context: `URL: ${info.pageUrl}`,
-        pageTitle: tab.title
-      });
-
-      // Send result to content script
-      await this.sendToTab(tab.id, {
-        action: 'showResult',
-        requestId,
-        result: {
-          ...result,
-          language,
-          originalCode: info.selectionText
+  async isContentScriptInjected(tabId) {
+    try {
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: () => {
+          return window.__DEVMENTOR_CONTENT_SCRIPT_INJECTED__ || false;
         }
       });
-
-      // Track successful processing
-      await this.trackUsage('analysis_success', { 
-        type, 
-        language: language.language,
-        codeLength: info.selectionText.length
-      });
-
+      
+      return result?.result || false;
     } catch (error) {
-      this.logger.error(`${type} analysis failed:`, error);
+      return false;
+    }
+  }
+
+  async injectSidebar(tabId) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content/components/sidebar-injector.js']
+      });
+      
+      await chrome.scripting.insertCSS({
+        target: { tabId },
+        files: ['assets/styles/sidebar.css']
+      });
+      
+      console.log('[ServiceWorker] ✅ Sidebar injected successfully');
+    } catch (error) {
+      console.warn('[ServiceWorker] ⚠️ Sidebar injection failed:', error);
+      throw new Error(`Cannot inject sidebar on this page: ${error.message}`);
+    }
+  }
+
+  async handleCodeAnalysis(type, data, tab) {
+    try {
+      let result;
+      
+      switch (type) {
+        case 'explain':
+          result = await this.modules.chromeAI.explainCode(data.selectionText, { url: tab.url });
+          break;
+        case 'debug':
+          result = await this.modules.chromeAI.debugCode(data.selectionText, { url: tab.url });
+          break;
+        case 'document':
+          result = await this.modules.chromeAI.generateDocumentation(data.selectionText, { url: tab.url });
+          break;
+        case 'refactor':
+          result = await this.modules.chromeAI.refactorCode(data.selectionText, { url: tab.url });
+          break;
+        default:
+          throw new Error(`Unknown analysis type: ${type}`);
+      }
+      
+      // Send result to content script
+      await chrome.tabs.sendMessage(tab.id, {
+        action: 'show-analysis-result',
+        type: type,
+        result: result,
+        code: data.selectionText
+      });
+      
+    } catch (error) {
+      console.error(`[ServiceWorker] Code analysis (${type}) failed:`, error);
       
       // Send error to content script
-      await this.sendToTab(tab.id, {
-        action: 'showError',
-        requestId,
-        error: {
-          type: error.name,
-          message: error.message,
-          userFriendly: this.getUserFriendlyError(error)
+      await chrome.tabs.sendMessage(tab.id, {
+        action: 'show-analysis-error',
+        type: type,
+        error: error.message
+      });
+    }
+  }
+
+  async performCleanup() {
+    try {
+      // Clean up old active requests
+      const now = Date.now();
+      for (const [requestId, request] of this.activeRequests) {
+        if (now - request.startTime > 300000) { // 5 minutes
+          this.activeRequests.delete(requestId);
         }
-      });
-
-      // Track error
-      await this.trackUsage('analysis_error', { 
-        type, 
-        error: error.message 
-      });
-
-    } finally {
-      this.activeRequests.delete(requestId);
-    }
-  }
-
-  /**
-   * Handle screenshot analysis requests
-   * @param {Object} info - Context menu info
-   * @param {Object} tab - Tab info
-   */
-  async handleScreenshotAnalysis(info, tab) {
-    const requestId = this.generateRequestId();
-
-    try {
-      // Send screenshot request to content script
-      await this.sendToTab(tab.id, {
-        action: 'requestScreenshot',
-        requestId
-      });
-
-    } catch (error) {
-      this.logger.error('Screenshot analysis failed:', error);
-      await this.sendErrorToTab(tab.id, error);
-    }
-  }
-
-  /**
-   * Handle messages from content scripts
-   * @param {Object} message - Message object
-   * @param {Object} sender - Sender info
-   * @param {Function} sendResponse - Response callback
-   */
-  async handleMessage(message, sender, sendResponse) {
-    this.logger.info('Received message:', message.action);
-
-    try {
-      switch (message.action) {
-        case 'processScreenshot':
-          await this.processScreenshot(message, sender);
-          break;
-          
-        case 'getAIStatus':
-          sendResponse(await this.getAIStatus());
-          break;
-          
-        case 'getStats':
-          sendResponse(await this.getStats());
-          break;
-          
-        case 'clearData':
-          await this.clearUserData();
-          sendResponse({ success: true });
-          break;
-          
-        default:
-          this.logger.warn('Unknown message action:', message.action);
       }
-
-    } catch (error) {
-      this.logger.error('Message handling failed:', error);
-      sendResponse({ error: error.message });
-    }
-
-    return true; // Keep message channel open for async responses
-  }
-
-  /**
-   * Process screenshot data
-   * @param {Object} message - Message with screenshot data
-   * @param {Object} sender - Sender info
-   */
-  async processScreenshot(message, sender) {
-    const { base64Image, requestId, mediaType } = message;
-
-    try {
-      // Send loading state
-      await this.sendToTab(sender.tab.id, {
-        action: 'showLoading',
-        requestId,
-        type: 'screenshot',
-        message: 'Analyzing screenshot...'
-      });
-
-      // Process with AI (multimodal - screenshot analysis)
-      const result = await self.aiSessionManager.processCodeWithChaining('', 'screenshot', {
-        imageData: base64Image,
-        mediaType: mediaType
-      });
-
-      // Send result
-      await this.sendToTab(sender.tab.id, {
-        action: 'showResult',
-        requestId,
-        result
-      });
-
-      // Track usage
-      await this.trackUsage('screenshot_analysis', {
-        imageSize: base64Image.length,
-        mediaType
-      });
-
-    } catch (error) {
-      this.logger.error('Screenshot processing failed:', error);
       
-      await this.sendToTab(sender.tab.id, {
-        action: 'showError',
-        requestId,
-        error: {
-          type: error.name,
-          message: error.message,
-          userFriendly: this.getUserFriendlyError(error)
-        }
-      });
-    }
-  }
-
-  /**
-   * Detect programming language
-   * @param {string} code - Code snippet
-   * @param {string} url - Page URL
-   * @returns {Object} Language detection result
-   */
-  async detectLanguage(code, url) {
-    try {
-      // Try to get filename from URL
-      const filename = this.extractFilenameFromUrl(url);
-      
-      // Use language detector (would need to import this)
-      // For now, simple detection
-      return this.simpleLanguageDetection(code, filename);
-      
-    } catch (error) {
-      this.logger.warn('Language detection failed:', error);
-      return { language: 'auto', confidence: 0 };
-    }
-  }
-
-  /**
-   * Simple language detection fallback
-   * @param {string} code - Code to analyze
-   * @param {string} filename - Optional filename
-   * @returns {Object} Detection result
-   */
-  simpleLanguageDetection(code, filename) {
-    // Basic patterns for common languages
-    if (code.includes('function') && code.includes('{')) {
-      return { language: 'javascript', confidence: 0.7 };
-    }
-    if (code.includes('def ') && code.includes(':')) {
-      return { language: 'python', confidence: 0.8 };
-    }
-    if (code.includes('public class')) {
-      return { language: 'java', confidence: 0.8 };
-    }
-    if (code.includes('#include')) {
-      return { language: 'cpp', confidence: 0.8 };
-    }
-
-    return { language: 'auto', confidence: 0.2 };
-  }
-
-  /**
-   * Extract filename from URL
-   * @param {string} url - URL to analyze
-   * @returns {string} Filename or empty string
-   */
-  extractFilenameFromUrl(url) {
-    try {
-      const urlObj = new URL(url);
-      const pathname = urlObj.pathname;
-      const filename = pathname.split('/').pop();
-      return filename || '';
-    } catch (error) {
-      return '';
-    }
-  }
-
-  /**
-   * Get loading message for analysis type
-   * @param {string} type - Analysis type
-   * @returns {string} Loading message
-   */
-  getLoadingMessage(type) {
-    const messages = {
-      explain: 'Analyzing your code...',
-      debug: 'Scanning for bugs and issues...',
-      document: 'Generating documentation...',
-      refactor: 'Analyzing for improvements...',
-      screenshot: 'Processing screenshot...'
-    };
-
-    return messages[type] || 'Processing...';
-  }
-
-  /**
-   * Get user-friendly error message
-   * @param {Error} error - Error object
-   * @returns {string} User-friendly message
-   */
-  getUserFriendlyError(error) {
-    const message = error.message?.toLowerCase() || '';
-    
-    if (message.includes('not available') || message.includes('not supported')) {
-      return 'Chrome Built-in AI is not available. Please ensure you have Chrome Canary with AI features enabled.';
-    }
-    if (message.includes('quota') || message.includes('limit')) {
-      return 'AI processing limit reached. Please try again in a few minutes.';
-    }
-    if (message.includes('timeout')) {
-      return 'Request timed out. Please try with a shorter code snippet.';
-    }
-    if (message.includes('session') || message.includes('expired')) {
-      return 'AI session expired. Starting a new session...';
-    }
-    
-    return 'Something went wrong. Please try again.';
-  }
-
-  /**
-   * Send message to tab
-   * @param {number} tabId - Tab ID
-   * @param {Object} message - Message to send
-   */
-  async sendToTab(tabId, message) {
-    try {
-      await chrome.tabs.sendMessage(tabId, message);
-    } catch (error) {
-      this.logger.error('Failed to send message to tab:', error);
-    }
-  }
-
-  /**
-   * Send error to tab
-   * @param {number} tabId - Tab ID
-   * @param {Error} error - Error to send
-   */
-  async sendErrorToTab(tabId, error) {
-    await this.sendToTab(tabId, {
-      action: 'showError',
-      error: {
-        type: error.name,
-        message: error.message,
-        userFriendly: this.getUserFriendlyError(error)
+      // Clean up storage
+      if (this.modules?.storage) {
+        await this.modules.storage.cleanupOldData();
       }
-    });
+      
+      // Update last cleanup time
+      this.persistentState.lastCleanup = now;
+      await this.savePersistentState();
+      
+      console.log('[ServiceWorker] ✅ Cleanup completed');
+    } catch (error) {
+      console.error('[ServiceWorker] ❌ Cleanup failed:', error);
+    }
   }
 
-  /**
-   * Generate unique request ID
-   * @returns {string} Request ID
-   */
+  async handleInitializationError(error) {
+    try {
+      await this.trackEvent('initialization_error', { 
+        error: error.message,
+        stack: error.stack 
+      });
+    } catch (trackingError) {
+      console.error('[ServiceWorker] Failed to track initialization error:', trackingError);
+    }
+  }
+
+  async trackEvent(eventName, data = {}) {
+    try {
+      if (this.modules?.storage) {
+        await this.modules.storage.trackEvent(eventName, data);
+      }
+    } catch (error) {
+      console.error('[ServiceWorker] Failed to track event:', error);
+    }
+  }
+
   generateRequestId() {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  /**
-   * Handle tab removal
-   * @param {number} tabId - Removed tab ID
-   */
-  async handleTabRemoved(tabId) {
-    // Clean up any active requests for this tab
-    for (const [requestId, request] of this.activeRequests.entries()) {
-      if (request.tabId === tabId) {
-        this.activeRequests.delete(requestId);
-      }
-    }
-  }
-
-  /**
-   * Handle tab updates
-   * @param {number} tabId - Tab ID
-   * @param {Object} changeInfo - Change information
-   * @param {Object} tab - Tab object
-   */
-  async handleTabUpdated(tabId, changeInfo, tab) {
-    // Clean up requests if page navigated
-    if (changeInfo.status === 'loading' && changeInfo.url) {
-      for (const [requestId, request] of this.activeRequests.entries()) {
-        if (request.tabId === tabId) {
-          this.activeRequests.delete(requestId);
+  // Cleanup method for service worker shutdown
+  destroy() {
+    // Clean up ephemeral state
+    this.activeRequests.clear();
+    this.cleanupTasks.clear();
+    
+    // Clean up modules
+    if (this.modules) {
+      for (const [name, module] of Object.entries(this.modules)) {
+        if (module.destroy) {
+          module.destroy();
         }
       }
+      this.modules = null;
     }
-  }
-
-  /**
-   * Handle extension suspend
-   */
-  async handleSuspend() {
-    this.logger.info('Extension suspending...');
     
-    // Clean up resources
-    await self.aiSessionManager.shutdown();
-    this.activeRequests.clear();
-  }
-
-  /**
-   * Track usage analytics
-   * @param {string} event - Event name
-   * @param {Object} data - Additional data
-   */
-  async trackUsage(event, data = {}) {
-    try {
-      const usage = {
-        event,
-        data,
-        timestamp: Date.now(),
-        version: chrome.runtime.getManifest().version
-      };
-
-      // Store in local storage
-      const storageKey = 'devmentor_usage_stats';
-      const result = await chrome.storage.local.get(storageKey);
-      const stats = result[storageKey] || [];
-      
-      stats.unshift(usage);
-      
-      // Keep only last 1000 events
-      const trimmedStats = stats.slice(0, 1000);
-      
-      await chrome.storage.local.set({ [storageKey]: trimmedStats });
-
-    } catch (error) {
-      this.logger.warn('Usage tracking failed:', error);
-    }
-  }
-
-  /**
-   * Show welcome notification
-   */
-  async showWelcomeNotification() {
-    // Could show chrome notification or track welcome event
-    await this.trackUsage('welcome', {
-      installTime: Date.now()
-    });
-  }
-
-  /**
-   * Handle extension update
-   * @param {string} previousVersion - Previous version
-   */
-  async handleUpdate(previousVersion) {
-    await this.trackUsage('update', {
-      previousVersion,
-      currentVersion: chrome.runtime.getManifest().version
-    });
-  }
-
-  /**
-   * Track installation
-   */
-  async trackInstallation() {
-    await this.trackUsage('install', {
-      installTime: Date.now(),
-      version: chrome.runtime.getManifest().version
-    });
-  }
-
-  /**
-   * Get AI status
-   * @returns {Object} AI status information
-   */
-  async getAIStatus() {
-    return await self.aiSessionManager.getMetrics();
-  }
-
-  /**
-   * Get usage statistics
-   * @returns {Object} Usage statistics
-   */
-  async getStats() {
-    const storageKey = 'devmentor_usage_stats';
-    const result = await chrome.storage.local.get(storageKey);
-    const usage = result[storageKey] || [];
+    this.isInitialized = false;
+    this.isShuttingDown = true;
     
-    const stats = {
-      totalEvents: usage.length,
-      byEvent: {},
-      recent: usage.slice(0, 10),
-      aiStatus: await this.getAIStatus()
-    };
-
-    // Group by event type
-    usage.forEach(event => {
-      stats.byEvent[event.event] = (stats.byEvent[event.event] || 0) + 1;
-    });
-
-    return stats;
-  }
-
-  /**
-   * Clear user data
-   */
-  async clearUserData() {
-    await chrome.storage.local.clear();
-    await this.trackUsage('data_cleared');
+    console.log('[ServiceWorker] ✅ Service worker destroyed');
   }
 }
 
-// Initialize service worker
-const serviceWorker = new DevMentorServiceWorker();
+// Global instance
+const swCore = new DevMentorServiceWorker();
 
+// Initialize when service worker starts
+swCore.initialize().catch(console.error);
+
+console.log('[ServiceWorker] ✅ ES6 Module service worker loaded');
