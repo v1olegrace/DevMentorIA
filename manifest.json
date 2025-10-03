@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "DevMentor AI - Demo",
+  "name": "DevMentor AI - Enterprise Ready",
   "version": "1.0.0",
-  "description": "AI-powered code explanation and debugging assistant - Hackathon Demo",
+  "description": "AI-powered coding assistant with Chrome Built-in AI integration",
   
   "permissions": [
     "activeTab",
     "contextMenus",
     "storage",
-    "scripting"
+    "scripting",
+    "alarms"
   ],
   
   "host_permissions": [
@@ -23,26 +24,29 @@
   ],
   
   "background": {
-    "service_worker": "background/service-worker.js"
+    "service_worker": "background/sw-loader.js",
+    "type": "module"
   },
   
-  "action": {
-    "default_popup": "popup/popup.html",
-    "default_title": "DevMentor AI",
-    "default_icon": {
-      "16": "assets/icons/icon16.svg",
-      "32": "assets/icons/icon32.svg",
-      "48": "assets/icons/icon48.svg",
-      "128": "assets/icons/icon128.svg"
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*",
+        "https://stackoverflow.com/*",
+        "https://developer.mozilla.org/*"
+      ],
+      "js": ["content/main.js"],
+      "css": ["assets/styles/content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
     }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:;"
   },
   
-  "icons": {
-    "16": "assets/icons/icon16.svg",
-    "32": "assets/icons/icon32.svg",
-    "48": "assets/icons/icon48.svg",
-    "128": "assets/icons/icon128.svg"
-  },
+  "minimum_chrome_version": "127",
   
   "commands": {
     "explain-code": {
@@ -64,7 +68,7 @@
         "default": "Ctrl+Shift+G",
         "mac": "Command+Shift+G"
       },
-      "description": "Generate documentation for selected code"
+      "description": "Generate documentation"
     },
     "refactor-code": {
       "suggested_key": {
@@ -77,7 +81,10 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["assets/styles/*"],
+      "resources": [
+        "assets/styles/*",
+        "content/components/*"
+      ],
       "matches": [
         "https://github.com/*",
         "https://stackoverflow.com/*",
@@ -91,7 +98,21 @@
     }
   ],
   
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self';"
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "DevMentor AI",
+    "default_icon": {
+      "16": "assets/icons/icon16.svg",
+      "32": "assets/icons/icon32.svg",
+      "48": "assets/icons/icon48.svg",
+      "128": "assets/icons/icon128.svg"
+    }
+  },
+  
+  "icons": {
+    "16": "assets/icons/icon16.svg",
+    "32": "assets/icons/icon32.svg",
+    "48": "assets/icons/icon48.svg",
+    "128": "assets/icons/icon128.svg"
   }
 }
