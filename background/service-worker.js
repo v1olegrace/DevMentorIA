@@ -3,9 +3,6 @@
  * Handles context menus, message passing, and AI coordination
  */
 
-// Import AI Session Manager
-importScripts('ai-session-manager.js');
-
 class DevMentorServiceWorker {
   constructor() {
     this.isInitialized = false;
@@ -36,8 +33,8 @@ class DevMentorServiceWorker {
       // Create context menus
       await this.createContextMenus();
       
-      // Initialize AI Session Manager
-      await self.aiSessionManager.initialize();
+      // Initialize AI Session Manager (mock for demo)
+      this.initializeAISession();
       
       this.isInitialized = true;
       this.logger.info('DevMentor AI initialized successfully');
@@ -45,6 +42,25 @@ class DevMentorServiceWorker {
     } catch (error) {
       this.logger.error('Initialization failed:', error);
     }
+  }
+
+  /**
+   * Initialize AI Session (Mock for Demo)
+   */
+  initializeAISession() {
+    this.logger.info('Initializing AI Session Manager (Demo Mode)');
+    // Mock AI session for hackathon demo
+    this.aiSessionManager = {
+      initialized: true,
+      available: true,
+      processCode: async (code, type) => {
+        return {
+          success: true,
+          result: `Demo ${type} result for: ${code.substring(0, 50)}...`,
+          timestamp: new Date().toISOString()
+        };
+      }
+    };
   }
 
   /**

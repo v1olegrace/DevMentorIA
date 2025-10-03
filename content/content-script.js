@@ -1,17 +1,11 @@
 /**
- * DevMentor AI - Main Content Script
- * Orchestrates all content script functionality and UI management
+ * DevMentor AI - Content Script (Demo Version)
+ * Minimal implementation for hackathon demonstration
  */
 
 class DevMentorContentScript {
   constructor() {
     this.isInitialized = false;
-    this.uiManager = null;
-    this.codeAnalyzer = null;
-    this.screenshotHandler = null;
-    this.activeRequests = new Map();
-    
-    // Initialize logger
     this.logger = {
       debug: (...args) => console.debug('[ContentScript]', ...args),
       info: (...args) => console.info('[ContentScript]', ...args),
@@ -23,20 +17,17 @@ class DevMentorContentScript {
   }
 
   /**
-   * Initialize content script
+   * Initialize content script (Demo Mode)
    */
   async init() {
     try {
-      this.logger.info('Initializing DevMentor AI content script...');
+      this.logger.info('DevMentor AI Content Script - Demo Mode');
       
-      // Setup event listeners
+      // Setup basic event listeners
       this.setupEventListeners();
       
-      // Setup message handlers
-      this.setupMessageHandlers();
-      
       this.isInitialized = true;
-      this.logger.info('DevMentor AI content script initialized successfully');
+      this.logger.info('Content script initialized successfully');
       
     } catch (error) {
       this.logger.error('Content script initialization failed:', error);
@@ -44,79 +35,49 @@ class DevMentorContentScript {
   }
 
   /**
-   * Setup event listeners
+   * Setup event listeners (Demo)
    */
   setupEventListeners() {
-    // Text selection handling
-    document.addEventListener('mouseup', this.handleTextSelection.bind(this));
-    
-    // Keyboard shortcuts
-    document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
-  }
+    // Listen for messages from popup/background
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      this.handleMessage(request, sender, sendResponse);
+      return true; // Keep message channel open
+    });
 
-  /**
-   * Setup message handlers
-   */
-  setupMessageHandlers() {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      this.handleMessage(message, sender, sendResponse);
-      return true;
+    // Handle keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      this.handleKeyboardShortcuts(event);
     });
   }
 
   /**
-   * Handle messages from background script
+   * Handle messages (Demo)
    */
-  async handleMessage(message, sender, sendResponse) {
-    try {
-      const { action, data } = message;
-      
-      switch (action) {
-        case 'explainCode':
-          await this.handleExplainCode(data);
-          break;
-        case 'getSelectedText':
-          sendResponse({ text: this.getSelectedText() });
-          break;
-        default:
-          this.logger.warn('Unknown action:', action);
-      }
-      
-    } catch (error) {
-      this.logger.error('Message handling failed:', error);
-      sendResponse({ error: error.message });
-    }
-  }
-
-  /**
-   * Handle text selection
-   */
-  handleTextSelection(event) {
-    const selectedText = this.getSelectedText();
-    if (selectedText && selectedText.length > 10) {
-      this.logger.debug('Code selected:', selectedText.substring(0, 50));
-    }
-  }
-
-  /**
-   * Handle keyboard shortcuts
-   */
-  handleKeyboardShortcuts(event) {
-    const isMac = navigator.platform.indexOf('Mac') > -1;
-    const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
+  handleMessage(request, sender, sendResponse) {
+    this.logger.debug('Received message:', request);
     
-    if (ctrlKey && event.shiftKey) {
-      switch (event.code) {
-        case 'KeyE':
-          event.preventDefault();
-          this.handleExplainCode();
-          break;
-      }
+    switch (request.action) {
+      case 'getSelectedCode':
+        sendResponse({ 
+          success: true, 
+          code: this.getSelectedText(),
+          language: this.detectLanguage()
+        });
+        break;
+        
+      case 'analyzeCode':
+        this.analyzeCodeDemo(request.code, request.type)
+          .then(result => sendResponse(result))
+          .catch(error => sendResponse({ success: false, error: error.message }));
+        break;
+        
+      default:
+        sendResponse({ success: false, error: 'Unknown action' });
     }
   }
 
   /**
-   * Get currently selected text
+   * Get selected text (Demo)
    */
   getSelectedText() {
     const selection = window.getSelection();
@@ -124,67 +85,110 @@ class DevMentorContentScript {
   }
 
   /**
-   * Handle explain code action
+   * Detect programming language (Demo)
    */
-  async handleExplainCode(data = null) {
-    try {
-      const selectedText = data?.text || this.getSelectedText();
-      if (!selectedText) {
-        this.showNotification('Please select some code to explain');
-        return;
-      }
-      
-      this.logger.info('Explaining code:', selectedText.substring(0, 100));
-      this.showNotification('DevMentor AI is analyzing your code...');
-      
-    } catch (error) {
-      this.logger.error('Explain code failed:', error);
-      this.showError('Failed to explain code');
+  detectLanguage() {
+    const url = window.location.href;
+    if (url.includes('github.com')) return 'javascript';
+    if (url.includes('python')) return 'python';
+    if (url.includes('java')) return 'java';
+    return 'javascript'; // Default
+  }
+
+  /**
+   * Analyze code (Demo)
+   */
+  async analyzeCodeDemo(code, type) {
+    this.logger.info(`Demo analysis: ${type} for code`);
+    
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      success: true,
+      result: `Demo ${type} result: Code analyzed successfully!`,
+      timestamp: new Date().toISOString(),
+      language: this.detectLanguage()
+    };
+  }
+
+  /**
+   * Handle keyboard shortcuts (Demo)
+   */
+  handleKeyboardShortcuts(event) {
+    // Ctrl+Shift+E: Explain code
+    if (event.ctrlKey && event.shiftKey && event.key === 'E') {
+      event.preventDefault();
+      this.triggerAnalysis('explain');
+    }
+    
+    // Ctrl+Shift+D: Debug code
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+      event.preventDefault();
+      this.triggerAnalysis('debug');
     }
   }
 
   /**
-   * Show notification
+   * Trigger analysis (Demo)
    */
-  showNotification(message, type = 'info') {
+  async triggerAnalysis(type) {
+    const code = this.getSelectedText();
+    if (!code) {
+      this.logger.warn('No code selected');
+      return;
+    }
+
+    try {
+      const result = await this.analyzeCodeDemo(code, type);
+      this.logger.info('Analysis completed:', result);
+      
+      // Show demo notification
+      this.showDemoNotification(type, result.result);
+      
+    } catch (error) {
+      this.logger.error('Analysis failed:', error);
+    }
+  }
+
+  /**
+   * Show demo notification
+   */
+  showDemoNotification(type, result) {
     const notification = document.createElement('div');
     notification.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #333;
+      background: #4285f4;
       color: white;
-      padding: 12px 20px;
-      border-radius: 6px;
-      z-index: 999999;
-      font-family: Arial, sans-serif;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 300px;
     `;
-    notification.textContent = message;
+    
+    notification.innerHTML = `
+      <div style="font-weight: 600; margin-bottom: 4px;">DevMentor AI Demo</div>
+      <div>${type.charAt(0).toUpperCase() + type.slice(1)}: ${result}</div>
+    `;
     
     document.body.appendChild(notification);
     
+    // Auto remove after 3 seconds
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
       }
     }, 3000);
   }
-
-  /**
-   * Show error message
-   */
-  showError(message) {
-    this.showNotification(message, 'error');
-  }
 }
 
 // Initialize content script
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    window.devMentorContentScript = new DevMentorContentScript();
-  });
-} else {
-  window.devMentorContentScript = new DevMentorContentScript();
+if (typeof window !== 'undefined') {
+  new DevMentorContentScript();
 }
 

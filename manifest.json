@@ -1,116 +1,50 @@
 {
   "manifest_version": 3,
-  "name": "DevMentor AI - Your Personal Coding Assistant",
+  "name": "DevMentor AI - Demo",
   "version": "1.0.0",
-  "description": "AI-powered code explanation, debugging, and learning assistant that works completely offline using Chrome's Built-in AI",
+  "description": "AI-powered code explanation and debugging assistant - Hackathon Demo",
   
   "permissions": [
     "activeTab",
     "contextMenus",
-    "storage",
-    "scripting"
+    "storage"
   ],
   
   "host_permissions": [
     "https://github.com/*",
-    "https://gitlab.com/*",
-    "https://bitbucket.org/*",
-    "https://codepen.io/*",
-    "https://jsfiddle.net/*",
-    "https://codesandbox.io/*",
-    "https://replit.com/*",
     "https://stackoverflow.com/*",
-    "https://stackexchange.com/*",
-    "https://leetcode.com/*",
-    "https://hackerrank.com/*",
-    "https://developer.mozilla.org/*",
-    "https://docs.google.com/*",
-    "https://colab.research.google.com/*",
-    "http://localhost/*",
-    "https://localhost/*"
+    "https://developer.mozilla.org/*"
   ],
   
   "background": {
-    "service_worker": "background/service-worker.js",
-    "type": "module"
+    "service_worker": "background/service-worker.js"
   },
   
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": [
-        "utils/secure-eval-manager.js",
-        "utils/secure-html-sanitizer.js",
-        "utils/secure-logger.js",
-        "utils/security-monitoring-system.js",
-        "utils/robust-input-validator.js",
-        "utils/anomaly-detection-system.js",
-        "utils/ai-provider-manager.js",
-        "utils/local-cache-system.js",
-        "utils/network-health-checker.js",
-        "utils/devmentor-ai-integration.js",
-        "utils/constants.js",
-        "utils/helpers.js", 
-        "utils/language-detector.js",
-        "utils/error-handler.js",
-        "utils/advanced-timeout-system.js",
-        "utils/media-rich-explainer.js",
-        "content/code-analyzer.js",
-        "content/screenshot-handler.js",
-        "content/ui-manager.js",
-        "content/premium-ui-manager.js",
-        "content/content-script.js"
-      ],
-      "css": [
-        "assets/styles/main.css",
-        "assets/styles/sidebar.css", 
-        "assets/styles/animations.css",
-        "assets/styles/premium-features.css"
-      ],
+      "matches": ["https://github.com/*", "https://stackoverflow.com/*"],
+      "js": ["content/content-script.js"],
       "run_at": "document_end"
     }
   ],
   
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "DevMentor AI - Coding Assistant",
+    "default_title": "DevMentor AI",
     "default_icon": {
-      "16": "assets/icons/icon16.svg",
-      "32": "assets/icons/icon32.svg",
-      "48": "assets/icons/icon48.svg",
-      "128": "assets/icons/icon128.svg"
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
     }
   },
   
   "icons": {
-    "16": "assets/icons/icon16.svg",
-    "32": "assets/icons/icon32.svg", 
-    "48": "assets/icons/icon48.svg",
-    "128": "assets/icons/icon128.svg"
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
   },
-  
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "assets/templates/*.js",
-        "assets/styles/*.css",
-        "assets/icons/*.svg",
-        "assets/icons/*.png",
-        "examples/*.html",
-        "examples/*.js"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ],
-  
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; media-src 'self' data:;"
-  },
-  
-  "minimum_chrome_version": "127",
-  
-  "author": "DevMentor AI Team - Google Hackathon 2024",
-  "homepage_url": "https://github.com/devmentor-ai/chrome-extension",
   
   "commands": {
     "explain-code": {
@@ -122,29 +56,35 @@
     },
     "debug-code": {
       "suggested_key": {
-        "default": "Ctrl+Shift+D", 
+        "default": "Ctrl+Shift+D",
         "mac": "Command+Shift+D"
       },
-      "description": "Debug and analyze code issues"
+      "description": "Debug selected code"
+    },
+    "document-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Doc",
+        "mac": "Command+Shift+Doc"
+      },
+      "description": "Generate documentation for selected code"
     },
     "refactor-code": {
       "suggested_key": {
         "default": "Ctrl+Shift+R",
         "mac": "Command+Shift+R"
       },
-      "description": "Refactor code with Google best practices"
-    },
-    "toggle-sidebar": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+M",
-        "mac": "Command+Shift+M"
-      },
-      "description": "Toggle DevMentor AI sidebar"
+      "description": "Refactor selected code"
     }
   },
   
-  "options_ui": {
-    "page": "options/options.html",
-    "open_in_tab": false
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/styles/*", "assets/icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
   }
 }
