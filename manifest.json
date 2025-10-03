@@ -54,22 +54,22 @@
     },
     "debug-code": {
       "suggested_key": {
-        "default": "Ctrl+Shift+D",
-        "mac": "Command+Shift+D"
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
       },
       "description": "Debug selected code"
     },
     "document-code": {
       "suggested_key": {
-        "default": "Ctrl+Shift+O",
-        "mac": "Command+Shift+O"
+        "default": "Ctrl+Shift+G",
+        "mac": "Command+Shift+G"
       },
       "description": "Generate documentation for selected code"
     },
     "refactor-code": {
       "suggested_key": {
-        "default": "Ctrl+Shift+F",
-        "mac": "Command+Shift+F"
+        "default": "Ctrl+Shift+R",
+        "mac": "Command+Shift+R"
       },
       "description": "Refactor selected code"
     }
