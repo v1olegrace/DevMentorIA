@@ -1,618 +1,561 @@
 /**
- * DevMentor AI - Service Worker (ES6 Module Compatible)
- * Handles context menus, message passing, and AI coordination
- * Optimized for service worker lifecycle management
+ * DevMentor AI - Service Worker (ES6 Modules - Official Chrome Pattern)
+ * Follows official Chrome Extensions documentation for Manifest V3
+ * Uses persistent storage and proper lifecycle management
  */
 
-// Import ES6 modules (compatible with "type": "module")
-import { MessageHandler } from './modules/message-handler.js';
+// ES6 Module imports (compatible with "type": "module")
+import { AISessionManager } from './modules/ai-session-manager.js';
 import { ContextMenuManager } from './modules/context-menu.js';
 import { StorageManager } from './modules/storage.js';
 import { ChromeAI } from './modules/chrome-ai.js';
 
-class DevMentorServiceWorker {
-  constructor() {
-    // Service worker lifecycle state
-    this.isInitialized = false;
-    this.isShuttingDown = false;
+// Global state (ephemeral - will be lost on termination)
+let isInitialized = false;
+let activeRequests = new Map();
+
+// Persistent state keys
+const STORAGE_KEYS = {
+  CONTEXT_MENUS_CREATED: 'contextMenusCreated',
+  LAST_CLEANUP: 'lastCleanup',
+  SESSION_ID: 'sessionId',
+  AI_SESSIONS: 'aiSessions'
+};
+
+// --- TOP-LEVEL EVENT LISTENER REGISTRATION ---
+// These MUST be registered synchronously at the top level
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log('[ServiceWorker] Extension installed/updated:', details.reason);
+  
+  try {
+    // Initialize only once on install/update
+    if (details.reason === 'install' || details.reason === 'update') {
+      await initializeExtension();
+    }
+  } catch (error) {
+    console.error('[ServiceWorker] Installation failed:', error);
+  }
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('[ServiceWorker] Browser startup');
+  await initializeExtension();
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  try {
+    await handleContextMenuClick(info, tab);
+  } catch (error) {
+    console.error('[ServiceWorker] Context menu click failed:', error);
+  }
+});
+
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  try {
+    await handleCommand(command, tab);
+  } catch (error) {
+    console.error('[ServiceWorker] Command failed:', error);
+  }
+});
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  try {
+    await handleAlarm(alarm);
+  } catch (error) {
+    console.error('[ServiceWorker] Alarm failed:', error);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Return true to keep message channel open for async response
+  handleMessage(message, sender, sendResponse);
+  return true;
+});
+
+// --- INITIALIZATION ---
+async function initializeExtension() {
+  if (isInitialized) {
+    return;
+  }
+
+  try {
+    console.log('[ServiceWorker] Initializing extension...');
     
-    // Modules (will be initialized)
-    this.modules = null;
+    // Initialize storage manager
+    const storageManager = new StorageManager();
+    await storageManager.initialize();
     
-    // Ephemeral state (will be lost on termination)
-    this.activeRequests = new Map();
-    this.cleanupTasks = new Set();
+    // Initialize AI session manager
+    const aiSessionManager = new AISessionManager();
+    await aiSessionManager.initialize();
     
-    // Persistent state (stored in chrome.storage)
-    this.persistentState = {
-      contextMenusCreated: false,
-      lastCleanup: 0,
-      sessionId: null
-    };
-  }
-
-  async initialize() {
-    if (this.isInitialized) {
-      return;
-    }
-
-    try {
-      console.log('[ServiceWorker] Initializing with ES6 modules...');
-      
-      // Load persistent state
-      await this.loadPersistentState();
-      
-      // Initialize modules
-      this.modules = {
-        storage: new StorageManager(),
-        messages: new MessageHandler(),
-        contextMenus: new ContextMenuManager(),
-        chromeAI: new ChromeAI()
-      };
-      
-      // Initialize modules
-      await this.modules.storage.initialize();
-      await this.modules.chromeAI.initialize();
-      
-      // Set up event handlers
-      await this.setupEventHandlers();
-      
-      // Set up context menus (only if not already created)
-      if (!this.persistentState.contextMenusCreated) {
-        await this.setupContextMenus();
-        this.persistentState.contextMenusCreated = true;
-        await this.savePersistentState();
-      }
-      
-      // Set up cleanup alarm
-      await this.setupCleanupAlarm();
-      
-      this.isInitialized = true;
-      console.log('[ServiceWorker] ✅ Initialized successfully');
-      
-      // Track initialization
-      await this.trackEvent('service_worker_initialized');
-      
-    } catch (error) {
-      console.error('[ServiceWorker] ❌ Initialization failed:', error);
-      await this.handleInitializationError(error);
-      throw error;
-    }
-  }
-
-  async loadPersistentState() {
-    try {
-      const result = await chrome.storage.local.get(['persistentState']);
-      if (result.persistentState) {
-        this.persistentState = { ...this.persistentState, ...result.persistentState };
-      }
-      
-      // Generate session ID if not exists
-      if (!this.persistentState.sessionId) {
-        this.persistentState.sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await this.savePersistentState();
-      }
-    } catch (error) {
-      console.error('[ServiceWorker] Failed to load persistent state:', error);
-    }
-  }
-
-  async savePersistentState() {
-    try {
-      await chrome.storage.local.set({ persistentState: this.persistentState });
-    } catch (error) {
-      console.error('[ServiceWorker] Failed to save persistent state:', error);
-    }
-  }
-
-  async setupEventHandlers() {
-    // Message handlers
-    this.modules.messages.on('explain-code', this.handleExplainCode.bind(this));
-    this.modules.messages.on('debug-code', this.handleDebugCode.bind(this));
-    this.modules.messages.on('document-code', this.handleDocumentCode.bind(this));
-    this.modules.messages.on('refactor-code', this.handleRefactorCode.bind(this));
-    this.modules.messages.on('inject-sidebar', this.handleInjectSidebar.bind(this));
-    this.modules.messages.on('keep-alive', this.handleKeepAlive.bind(this));
+    // Initialize Chrome AI
+    const chromeAI = new ChromeAI();
+    await chromeAI.initialize();
     
-    // Command handlers
-    chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
+    // Initialize context menu manager
+    const contextMenuManager = new ContextMenuManager();
     
-    // Context menu handlers
-    chrome.contextMenus.onClicked.addListener(this.handleContextMenuClick.bind(this));
+    // Check if context menus already exist
+    const contextMenusCreated = await storageManager.getData(STORAGE_KEYS.CONTEXT_MENUS_CREATED);
     
-    // Alarm handlers
-    chrome.alarms.onAlarm.addListener(this.handleAlarm.bind(this));
-    
-    // Runtime handlers
-    chrome.runtime.onMessage.addListener(this.handleRuntimeMessage.bind(this));
-    chrome.runtime.onSuspend.addListener(this.handleSuspend.bind(this));
-  }
-
-  async setupContextMenus() {
-    try {
-      const menuItems = [
-        {
-          id: 'devmentor-explain',
-          title: 'Explain Code',
-          contexts: ['selection'],
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
-        },
-        {
-          id: 'devmentor-debug',
-          title: 'Debug Code',
-          contexts: ['selection'],
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
-        },
-        {
-          id: 'devmentor-document',
-          title: 'Generate Documentation',
-          contexts: ['selection'],
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
-        },
-        {
-          id: 'devmentor-refactor',
-          title: 'Refactor Code',
-          contexts: ['selection'],
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
-        },
-        {
-          id: 'devmentor-separator',
-          type: 'separator',
-          contexts: ['selection'],
-          documentUrlPatterns: [
-            'https://github.com/*',
-            'https://stackoverflow.com/*',
-            'https://developer.mozilla.org/*',
-            'https://gitlab.com/*',
-            'https://bitbucket.org/*',
-            'https://codepen.io/*',
-            'https://jsfiddle.net/*',
-            'https://codesandbox.io/*'
-          ]
-        }
-      ];
-
-      // Create menu items
-      for (const item of menuItems) {
-        await this.modules.contextMenus.create(item);
-      }
-      
-      console.log('[ServiceWorker] ✅ Context menus created');
-      
-    } catch (error) {
-      console.error('[ServiceWorker] ❌ Context menu setup failed:', error);
-      throw error;
-    }
-  }
-
-  async setupCleanupAlarm() {
-    try {
-      await chrome.alarms.create('storage-cleanup', { periodInMinutes: 60 });
-      console.log('[ServiceWorker] ✅ Cleanup alarm created');
-    } catch (error) {
-      console.error('[ServiceWorker] ❌ Failed to create cleanup alarm:', error);
-    }
-  }
-
-  // Message handlers
-  async handleExplainCode(request, sender, sendResponse) {
-    const requestId = this.generateRequestId();
-    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'explain' });
-    
-    try {
-      const result = await this.modules.chromeAI.explainCode(request.code, request.context);
-      
-      await this.trackEvent('code_explained', { 
-        codeLength: request.code.length,
-        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
-      });
-      
-      sendResponse({ success: true, data: result });
-    } catch (error) {
-      console.error('[ServiceWorker] Explain code failed:', error);
-      await this.trackEvent('code_explain_failed', { error: error.message });
-      sendResponse({ success: false, error: error.message });
-    } finally {
-      this.activeRequests.delete(requestId);
-    }
-  }
-
-  async handleDebugCode(request, sender, sendResponse) {
-    const requestId = this.generateRequestId();
-    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'debug' });
-    
-    try {
-      const result = await this.modules.chromeAI.debugCode(request.code, request.context);
-      
-      await this.trackEvent('code_debugged', { 
-        codeLength: request.code.length,
-        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
-      });
-      
-      sendResponse({ success: true, data: result });
-    } catch (error) {
-      console.error('[ServiceWorker] Debug code failed:', error);
-      await this.trackEvent('code_debug_failed', { error: error.message });
-      sendResponse({ success: false, error: error.message });
-    } finally {
-      this.activeRequests.delete(requestId);
-    }
-  }
-
-  async handleDocumentCode(request, sender, sendResponse) {
-    const requestId = this.generateRequestId();
-    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'document' });
-    
-    try {
-      const result = await this.modules.chromeAI.generateDocumentation(request.code, request.context);
-      
-      await this.trackEvent('documentation_generated', { 
-        codeLength: request.code.length,
-        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
-      });
-      
-      sendResponse({ success: true, data: result });
-    } catch (error) {
-      console.error('[ServiceWorker] Document code failed:', error);
-      await this.trackEvent('documentation_failed', { error: error.message });
-      sendResponse({ success: false, error: error.message });
-    } finally {
-      this.activeRequests.delete(requestId);
-    }
-  }
-
-  async handleRefactorCode(request, sender, sendResponse) {
-    const requestId = this.generateRequestId();
-    this.activeRequests.set(requestId, { startTime: Date.now(), type: 'refactor' });
-    
-    try {
-      const result = await this.modules.chromeAI.refactorCode(request.code, request.context);
-      
-      await this.trackEvent('code_refactored', { 
-        codeLength: request.code.length,
-        processingTime: Date.now() - this.activeRequests.get(requestId).startTime
-      });
-      
-      sendResponse({ success: true, data: result });
-    } catch (error) {
-      console.error('[ServiceWorker] Refactor code failed:', error);
-      await this.trackEvent('refactor_failed', { error: error.message });
-      sendResponse({ success: false, error: error.message });
-    } finally {
-      this.activeRequests.delete(requestId);
-    }
-  }
-
-  async handleInjectSidebar(request, sender, sendResponse) {
-    try {
-      await this.injectSidebar(sender.tab.id);
-      await this.trackEvent('sidebar_injected', { tabId: sender.tab.id });
-      sendResponse({ success: true });
-    } catch (error) {
-      console.error('[ServiceWorker] Sidebar injection failed:', error);
-      await this.trackEvent('sidebar_injection_failed', { error: error.message });
-      sendResponse({ success: false, error: error.message });
-    }
-  }
-
-  async handleKeepAlive(request, sender, sendResponse) {
-    sendResponse({ success: true, timestamp: Date.now() });
-  }
-
-  // Command handler
-  async handleCommand(command, tab) {
-    try {
-      console.log(`[ServiceWorker] Command received: ${command}`);
-      
-      // Inject content script if needed
-      await this.injectContentScriptIfNeeded(tab.id);
-      
-      // Get selected text
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => window.getSelection().toString().trim()
-      });
-
-      const selectedText = result?.result || '';
-
-      if (!selectedText) {
-        console.warn('[ServiceWorker] No text selected for command');
-        return;
-      }
-
-      // Handle different commands
-      switch (command) {
-        case 'explain-code':
-          await this.handleCodeAnalysis('explain', { selectionText: selectedText }, tab);
-          break;
-        case 'debug-code':
-          await this.handleCodeAnalysis('debug', { selectionText: selectedText }, tab);
-          break;
-        case 'document-code':
-          await this.handleCodeAnalysis('document', { selectionText: selectedText }, tab);
-          break;
-        case 'refactor-code':
-          await this.handleCodeAnalysis('refactor', { selectionText: selectedText }, tab);
-          break;
-        default:
-          console.warn(`[ServiceWorker] Unknown command: ${command}`);
-      }
-      
-      await this.trackEvent('command_executed', { command, hasSelection: !!selectedText });
-      
-    } catch (error) {
-      console.error(`[ServiceWorker] Command ${command} failed:`, error);
-      await this.trackEvent('command_failed', { command, error: error.message });
-    }
-  }
-
-  // Context menu handler
-  async handleContextMenuClick(info, tab) {
-    try {
-      console.log(`[ServiceWorker] Context menu clicked: ${info.menuItemId}`);
-      
-      if (info.menuItemId.startsWith('devmentor-')) {
-        const action = info.menuItemId.replace('devmentor-', '');
-        
-        await this.injectContentScriptIfNeeded(tab.id);
-        
-        await chrome.tabs.sendMessage(tab.id, {
-          action: `${action}-selection`,
-          code: info.selectionText,
-          context: { url: tab.url }
-        });
-        
-        await this.trackEvent('context_menu_used', { 
-          action, 
-          hasSelection: !!info.selectionText 
-        });
-      }
-    } catch (error) {
-      console.error('[ServiceWorker] Context menu handler failed:', error);
-    }
-  }
-
-  // Alarm handler
-  async handleAlarm(alarm) {
-    if (alarm.name === 'storage-cleanup') {
-      await this.performCleanup();
-    }
-  }
-
-  // Runtime message handler
-  async handleRuntimeMessage(message, sender, sendResponse) {
-    if (message.action === 'keep-alive') {
-      // Return a promise to keep the service worker alive
-      return true;
+    if (!contextMenusCreated) {
+      await setupContextMenus(contextMenuManager);
+      await storageManager.setData(STORAGE_KEYS.CONTEXT_MENUS_CREATED, true);
     }
     
-    // Delegate to message handler
-    if (this.modules?.messages) {
-      return this.modules.messages.handleMessage(message, sender, sendResponse);
-    }
+    // Set up cleanup alarm (replaces setInterval)
+    await setupCleanupAlarm();
     
-    return false;
-  }
-
-  // Suspend handler (service worker termination)
-  async handleSuspend() {
-    console.log('[ServiceWorker] Service worker suspending...');
-    this.isShuttingDown = true;
-    await this.performCleanup();
-    this.destroy();
-  }
-
-  // Utility methods
-  async injectContentScriptIfNeeded(tabId) {
-    try {
-      const isInjected = await this.isContentScriptInjected(tabId);
-      
-      if (!isInjected) {
-        console.log('[ServiceWorker] Injecting content script dynamically');
-        
-        await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ['content/content-script.js']
-        });
-        
-        console.log('[ServiceWorker] ✅ Content script injected successfully');
-      }
-      
-    } catch (error) {
-      console.error('[ServiceWorker] ❌ Failed to inject content script:', error);
-      throw error;
-    }
-  }
-
-  async isContentScriptInjected(tabId) {
-    try {
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tabId },
-        func: () => {
-          return window.__DEVMENTOR_CONTENT_SCRIPT_INJECTED__ || false;
-        }
-      });
-      
-      return result?.result || false;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  async injectSidebar(tabId) {
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['content/components/sidebar-injector.js']
-      });
-      
-      await chrome.scripting.insertCSS({
-        target: { tabId },
-        files: ['assets/styles/sidebar.css']
-      });
-      
-      console.log('[ServiceWorker] ✅ Sidebar injected successfully');
-    } catch (error) {
-      console.warn('[ServiceWorker] ⚠️ Sidebar injection failed:', error);
-      throw new Error(`Cannot inject sidebar on this page: ${error.message}`);
-    }
-  }
-
-  async handleCodeAnalysis(type, data, tab) {
-    try {
-      let result;
-      
-      switch (type) {
-        case 'explain':
-          result = await this.modules.chromeAI.explainCode(data.selectionText, { url: tab.url });
-          break;
-        case 'debug':
-          result = await this.modules.chromeAI.debugCode(data.selectionText, { url: tab.url });
-          break;
-        case 'document':
-          result = await this.modules.chromeAI.generateDocumentation(data.selectionText, { url: tab.url });
-          break;
-        case 'refactor':
-          result = await this.modules.chromeAI.refactorCode(data.selectionText, { url: tab.url });
-          break;
-        default:
-          throw new Error(`Unknown analysis type: ${type}`);
-      }
-      
-      // Send result to content script
-      await chrome.tabs.sendMessage(tab.id, {
-        action: 'show-analysis-result',
-        type: type,
-        result: result,
-        code: data.selectionText
-      });
-      
-    } catch (error) {
-      console.error(`[ServiceWorker] Code analysis (${type}) failed:`, error);
-      
-      // Send error to content script
-      await chrome.tabs.sendMessage(tab.id, {
-        action: 'show-analysis-error',
-        type: type,
-        error: error.message
-      });
-    }
-  }
-
-  async performCleanup() {
-    try {
-      // Clean up old active requests
-      const now = Date.now();
-      for (const [requestId, request] of this.activeRequests) {
-        if (now - request.startTime > 300000) { // 5 minutes
-          this.activeRequests.delete(requestId);
-        }
-      }
-      
-      // Clean up storage
-      if (this.modules?.storage) {
-        await this.modules.storage.cleanupOldData();
-      }
-      
-      // Update last cleanup time
-      this.persistentState.lastCleanup = now;
-      await this.savePersistentState();
-      
-      console.log('[ServiceWorker] ✅ Cleanup completed');
-    } catch (error) {
-      console.error('[ServiceWorker] ❌ Cleanup failed:', error);
-    }
-  }
-
-  async handleInitializationError(error) {
-    try {
-      await this.trackEvent('initialization_error', { 
-        error: error.message,
-        stack: error.stack 
-      });
-    } catch (trackingError) {
-      console.error('[ServiceWorker] Failed to track initialization error:', trackingError);
-    }
-  }
-
-  async trackEvent(eventName, data = {}) {
-    try {
-      if (this.modules?.storage) {
-        await this.modules.storage.trackEvent(eventName, data);
-      }
-    } catch (error) {
-      console.error('[ServiceWorker] Failed to track event:', error);
-    }
-  }
-
-  generateRequestId() {
-    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  // Cleanup method for service worker shutdown
-  destroy() {
-    // Clean up ephemeral state
-    this.activeRequests.clear();
-    this.cleanupTasks.clear();
+    isInitialized = true;
+    console.log('[ServiceWorker] ✅ Extension initialized successfully');
     
-    // Clean up modules
-    if (this.modules) {
-      for (const [name, module] of Object.entries(this.modules)) {
-        if (module.destroy) {
-          module.destroy();
-        }
-      }
-      this.modules = null;
-    }
+    // Track initialization
+    await trackEvent('extension_initialized', { reason: 'startup' });
     
-    this.isInitialized = false;
-    this.isShuttingDown = true;
-    
-    console.log('[ServiceWorker] ✅ Service worker destroyed');
+  } catch (error) {
+    console.error('[ServiceWorker] ❌ Initialization failed:', error);
+    await trackEvent('initialization_error', { error: error.message });
+    throw error;
   }
 }
 
-// Global instance
-const swCore = new DevMentorServiceWorker();
+// --- CONTEXT MENU SETUP ---
+async function setupContextMenus(contextMenuManager) {
+  try {
+    const menuItems = [
+      {
+        id: 'devmentor-explain',
+        title: 'Explain Code',
+        contexts: ['selection'],
+        documentUrlPatterns: [
+          'https://github.com/*',
+          'https://stackoverflow.com/*',
+          'https://developer.mozilla.org/*',
+          'https://gitlab.com/*',
+          'https://bitbucket.org/*',
+          'https://codepen.io/*',
+          'https://jsfiddle.net/*',
+          'https://codesandbox.io/*'
+        ]
+      },
+      {
+        id: 'devmentor-debug',
+        title: 'Debug Code',
+        contexts: ['selection'],
+        documentUrlPatterns: [
+          'https://github.com/*',
+          'https://stackoverflow.com/*',
+          'https://developer.mozilla.org/*',
+          'https://gitlab.com/*',
+          'https://bitbucket.org/*',
+          'https://codepen.io/*',
+          'https://jsfiddle.net/*',
+          'https://codesandbox.io/*'
+        ]
+      },
+      {
+        id: 'devmentor-document',
+        title: 'Generate Documentation',
+        contexts: ['selection'],
+        documentUrlPatterns: [
+          'https://github.com/*',
+          'https://stackoverflow.com/*',
+          'https://developer.mozilla.org/*',
+          'https://gitlab.com/*',
+          'https://bitbucket.org/*',
+          'https://codepen.io/*',
+          'https://jsfiddle.net/*',
+          'https://codesandbox.io/*'
+        ]
+      },
+      {
+        id: 'devmentor-refactor',
+        title: 'Refactor Code',
+        contexts: ['selection'],
+        documentUrlPatterns: [
+          'https://github.com/*',
+          'https://stackoverflow.com/*',
+          'https://developer.mozilla.org/*',
+          'https://gitlab.com/*',
+          'https://codepen.io/*',
+          'https://jsfiddle.net/*',
+          'https://codesandbox.io/*'
+        ]
+      },
+      {
+        id: 'devmentor-separator',
+        type: 'separator',
+        contexts: ['selection'],
+        documentUrlPatterns: [
+          'https://github.com/*',
+          'https://stackoverflow.com/*',
+          'https://developer.mozilla.org/*',
+          'https://gitlab.com/*',
+          'https://bitbucket.org/*',
+          'https://codepen.io/*',
+          'https://jsfiddle.net/*',
+          'https://codesandbox.io/*'
+        ]
+      }
+    ];
 
-// Initialize when service worker starts
-swCore.initialize().catch(console.error);
+    // Create menu items
+    for (const item of menuItems) {
+      await contextMenuManager.create(item);
+    }
+    
+    console.log('[ServiceWorker] ✅ Context menus created');
+    
+  } catch (error) {
+    console.error('[ServiceWorker] ❌ Context menu setup failed:', error);
+    throw error;
+  }
+}
+
+// --- ALARM SETUP (replaces setInterval) ---
+async function setupCleanupAlarm() {
+  try {
+    await chrome.alarms.create('storage-cleanup', { periodInMinutes: 60 });
+    console.log('[ServiceWorker] ✅ Cleanup alarm created');
+  } catch (error) {
+    console.error('[ServiceWorker] ❌ Failed to create cleanup alarm:', error);
+  }
+}
+
+// --- EVENT HANDLERS ---
+async function handleContextMenuClick(info, tab) {
+  if (!info.menuItemId.startsWith('devmentor-')) {
+    return;
+  }
+
+  try {
+    const action = info.menuItemId.replace('devmentor-', '');
+    
+    // Inject content script if needed
+    await injectContentScriptIfNeeded(tab.id);
+    
+    // Send message to content script
+    await chrome.tabs.sendMessage(tab.id, {
+      action: `${action}-selection`,
+      code: info.selectionText,
+      context: { url: tab.url }
+    });
+    
+    await trackEvent('context_menu_used', { 
+      action, 
+      hasSelection: !!info.selectionText 
+    });
+    
+  } catch (error) {
+    console.error('[ServiceWorker] Context menu handler failed:', error);
+  }
+}
+
+async function handleCommand(command, tab) {
+  try {
+    console.log(`[ServiceWorker] Command received: ${command}`);
+    
+    // Inject content script if needed
+    await injectContentScriptIfNeeded(tab.id);
+    
+    // Get selected text
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => window.getSelection().toString().trim()
+    });
+
+    const selectedText = result?.result || '';
+
+    if (!selectedText) {
+      console.warn('[ServiceWorker] No text selected for command');
+      return;
+    }
+
+    // Handle different commands
+    switch (command) {
+      case 'explain-code':
+        await handleCodeAnalysis('explain', { selectionText: selectedText }, tab);
+        break;
+      case 'debug-code':
+        await handleCodeAnalysis('debug', { selectionText: selectedText }, tab);
+        break;
+      case 'document-code':
+        await handleCodeAnalysis('document', { selectionText: selectedText }, tab);
+        break;
+      case 'refactor-code':
+        await handleCodeAnalysis('refactor', { selectionText: selectedText }, tab);
+        break;
+      default:
+        console.warn(`[ServiceWorker] Unknown command: ${command}`);
+    }
+    
+    await trackEvent('command_executed', { command, hasSelection: !!selectedText });
+    
+  } catch (error) {
+    console.error(`[ServiceWorker] Command ${command} failed:`, error);
+    await trackEvent('command_failed', { command, error: error.message });
+  }
+}
+
+async function handleAlarm(alarm) {
+  if (alarm.name === 'storage-cleanup') {
+    await performCleanup();
+  }
+}
+
+async function handleMessage(message, sender, sendResponse) {
+  const requestId = generateRequestId();
+  activeRequests.set(requestId, { startTime: Date.now() });
+  
+  try {
+    switch (message.action) {
+      case 'explain-code':
+        await handleExplainCode(message, sender, sendResponse);
+        break;
+      case 'debug-code':
+        await handleDebugCode(message, sender, sendResponse);
+        break;
+      case 'document-code':
+        await handleDocumentCode(message, sender, sendResponse);
+        break;
+      case 'refactor-code':
+        await handleRefactorCode(message, sender, sendResponse);
+        break;
+      case 'inject-sidebar':
+        await handleInjectSidebar(message, sender, sendResponse);
+        break;
+      case 'keep-alive':
+        sendResponse({ success: true, timestamp: Date.now() });
+        break;
+      default:
+        sendResponse({ success: false, error: `Unknown action: ${message.action}` });
+    }
+  } catch (error) {
+    console.error(`[ServiceWorker] Message handler failed:`, error);
+    sendResponse({ success: false, error: error.message });
+  } finally {
+    activeRequests.delete(requestId);
+  }
+}
+
+// --- MESSAGE HANDLERS ---
+async function handleExplainCode(request, sender, sendResponse) {
+  try {
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.explainCode(request.code, request.context);
+    
+    await trackEvent('code_explained', { 
+      codeLength: request.code.length
+    });
+    
+    sendResponse({ success: true, data: result });
+  } catch (error) {
+    console.error('[ServiceWorker] Explain code failed:', error);
+    await trackEvent('code_explain_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleDebugCode(request, sender, sendResponse) {
+  try {
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.debugCode(request.code, request.context);
+    
+    await trackEvent('code_debugged', { 
+      codeLength: request.code.length
+    });
+    
+    sendResponse({ success: true, data: result });
+  } catch (error) {
+    console.error('[ServiceWorker] Debug code failed:', error);
+    await trackEvent('code_debug_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleDocumentCode(request, sender, sendResponse) {
+  try {
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.generateDocumentation(request.code, request.context);
+    
+    await trackEvent('documentation_generated', { 
+      codeLength: request.code.length
+    });
+    
+    sendResponse({ success: true, data: result });
+  } catch (error) {
+    console.error('[ServiceWorker] Document code failed:', error);
+    await trackEvent('documentation_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleRefactorCode(request, sender, sendResponse) {
+  try {
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.refactorCode(request.code, request.context);
+    
+    await trackEvent('code_refactored', { 
+      codeLength: request.code.length
+    });
+    
+    sendResponse({ success: true, data: result });
+  } catch (error) {
+    console.error('[ServiceWorker] Refactor code failed:', error);
+    await trackEvent('refactor_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleInjectSidebar(request, sender, sendResponse) {
+  try {
+    await injectSidebar(sender.tab.id);
+    await trackEvent('sidebar_injected', { tabId: sender.tab.id });
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('[ServiceWorker] Sidebar injection failed:', error);
+    await trackEvent('sidebar_injection_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// --- UTILITY FUNCTIONS ---
+async function injectContentScriptIfNeeded(tabId) {
+  try {
+    const isInjected = await isContentScriptInjected(tabId);
+    
+    if (!isInjected) {
+      console.log('[ServiceWorker] Injecting content script dynamically');
+      
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['content/content-script.js']
+      });
+      
+      console.log('[ServiceWorker] ✅ Content script injected successfully');
+    }
+    
+  } catch (error) {
+    console.error('[ServiceWorker] ❌ Failed to inject content script:', error);
+    throw error;
+  }
+}
+
+async function isContentScriptInjected(tabId) {
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: () => {
+        return window.__DEVMENTOR_CONTENT_SCRIPT_INJECTED__ || false;
+      }
+    });
+    
+    return result?.result || false;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function injectSidebar(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content/components/sidebar-injector.js']
+    });
+    
+    await chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ['assets/styles/sidebar.css']
+    });
+    
+    console.log('[ServiceWorker] ✅ Sidebar injected successfully');
+  } catch (error) {
+    console.warn('[ServiceWorker] ⚠️ Sidebar injection failed:', error);
+    throw new Error(`Cannot inject sidebar on this page: ${error.message}`);
+  }
+}
+
+async function handleCodeAnalysis(type, data, tab) {
+  try {
+    const chromeAI = new ChromeAI();
+    let result;
+    
+    switch (type) {
+      case 'explain':
+        result = await chromeAI.explainCode(data.selectionText, { url: tab.url });
+        break;
+      case 'debug':
+        result = await chromeAI.debugCode(data.selectionText, { url: tab.url });
+        break;
+      case 'document':
+        result = await chromeAI.generateDocumentation(data.selectionText, { url: tab.url });
+        break;
+      case 'refactor':
+        result = await chromeAI.refactorCode(data.selectionText, { url: tab.url });
+        break;
+      default:
+        throw new Error(`Unknown analysis type: ${type}`);
+    }
+    
+    // Send result to content script
+    await chrome.tabs.sendMessage(tab.id, {
+      action: 'show-analysis-result',
+      type: type,
+      result: result,
+      code: data.selectionText
+    });
+    
+  } catch (error) {
+    console.error(`[ServiceWorker] Code analysis (${type}) failed:`, error);
+    
+    // Send error to content script
+    await chrome.tabs.sendMessage(tab.id, {
+      action: 'show-analysis-error',
+      type: type,
+      error: error.message
+    });
+  }
+}
+
+async function performCleanup() {
+  try {
+    // Clean up old active requests
+    const now = Date.now();
+    for (const [requestId, request] of activeRequests) {
+      if (now - request.startTime > 300000) { // 5 minutes
+        activeRequests.delete(requestId);
+      }
+    }
+    
+    // Clean up storage
+    const storageManager = new StorageManager();
+    await storageManager.cleanupOldData();
+    
+    // Update last cleanup time
+    await storageManager.setData(STORAGE_KEYS.LAST_CLEANUP, now);
+    
+    console.log('[ServiceWorker] ✅ Cleanup completed');
+  } catch (error) {
+    console.error('[ServiceWorker] ❌ Cleanup failed:', error);
+  }
+}
+
+async function trackEvent(eventName, data = {}) {
+  try {
+    const storageManager = new StorageManager();
+    await storageManager.trackEvent(eventName, data);
+  } catch (error) {
+    console.error('[ServiceWorker] Failed to track event:', error);
+  }
+}
+
+function generateRequestId() {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Initialize extension on service worker startup
+initializeExtension().catch(console.error);
 
 console.log('[ServiceWorker] ✅ ES6 Module service worker loaded');
