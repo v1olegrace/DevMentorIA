@@ -1,0 +1,59 @@
+{
+  "name": "devmentor-ai-linting",
+  "version": "1.0.0",
+  "description": "Linting configuration for DevMentor AI",
+  "scripts": {
+    "lint": "eslint . --ext .js,.json",
+    "lint:fix": "eslint . --ext .js,.json --fix",
+    "test": "node tests/unit-tests.js",
+    "test:browser": "open tests/test-runner.html?test=true"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-security": "^1.7.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "webextensions": true
+    },
+    "extends": [
+      "standard",
+      "plugin:security/recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-eval": "error",
+      "no-implied-eval": "error",
+      "no-new-func": "error",
+      "no-script-url": "error",
+      "security/detect-eval-with-expression": "error",
+      "security/detect-no-csrf-before-method-override": "error",
+      "security/detect-possible-timing-attacks": "error",
+      "security/detect-pseudoRandomBytes": "error",
+      "security/detect-unsafe-regex": "error",
+      "no-console": "warn",
+      "prefer-const": "error",
+      "no-var": "error",
+      "eqeqeq": "error",
+      "curly": "error",
+      "indent": ["error", 2],
+      "quotes": ["error", "single"],
+      "semi": ["error", "always"]
+    },
+    "globals": {
+      "chrome": "readonly",
+      "browser": "readonly",
+      "DevMentorChromeAI": "readonly",
+      "DevMentorSecureStorage": "readonly",
+      "DevMentorShadowOverlay": "readonly",
+      "__DEVMENTOR_SECURE_SANITIZER": "readonly",
+      "__DEVMENTOR_SAFE_EVAL": "readonly"
+    }
+  }
+}
