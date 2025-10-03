@@ -170,37 +170,91 @@ class DevMentorServiceWorker {
           id: 'devmentor-explain',
           title: 'Explain Code',
           contexts: ['selection'],
-          documentUrlPatterns: ['<all_urls>']
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
         },
         {
           id: 'devmentor-debug', 
-          title: '🐛 Find Bugs & Issues',
+          title: 'Find Bugs & Issues',
           contexts: ['selection'],
-          documentUrlPatterns: ['<all_urls>']
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
         },
         {
           id: 'devmentor-document',
           title: 'Generate Documentation',
           contexts: ['selection'], 
-          documentUrlPatterns: ['<all_urls>']
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
         },
         {
           id: 'devmentor-refactor',
           title: 'Suggest Refactoring',
           contexts: ['selection'],
-          documentUrlPatterns: ['<all_urls>']
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
         },
         {
           id: 'devmentor-separator',
           type: 'separator',
           contexts: ['selection'],
-          documentUrlPatterns: ['<all_urls>']
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
         },
         {
           id: 'devmentor-screenshot',
-          title: '📷 Analyze Screenshot',
+          title: 'Analyze Screenshot',
           contexts: ['page'],
-          documentUrlPatterns: ['<all_urls>']
+          documentUrlPatterns: [
+            'https://github.com/*',
+            'https://stackoverflow.com/*',
+            'https://developer.mozilla.org/*',
+            'https://gitlab.com/*',
+            'https://bitbucket.org/*',
+            'https://codepen.io/*',
+            'https://jsfiddle.net/*',
+            'https://codesandbox.io/*'
+          ]
         }
       ];
 
