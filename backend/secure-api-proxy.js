@@ -509,14 +509,216 @@ class SecureAPIProxy {
   }
 
   async executeInSandbox(expression, context, options) {
-    // Implement safe expression evaluation
-    // This is a simplified version - in production, use a proper sandbox
+    // Implement safe expression evaluation without new Function()
+    // Use OWASP-recommended approach for secure expression evaluation
     try {
-      const func = new Function('context', `return ${expression}`);
-      return func(context);
+      // Use SafeExpressionEvaluator if available
+      if (typeof globalThis !== 'undefined' && globalThis.__DEVMENTOR_SAFE_EVAL) {
+        return globalThis.__DEVMENTOR_SAFE_EVAL.safeEvaluate(expression, context);
+      }
+      
+      // Fallback: use safe stack-based evaluator
+      return this.safeStackEvaluate(expression, context);
+      
     } catch (error) {
       throw new Error(`Expression evaluation failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Safe stack-based evaluator without eval() or new Function()
+   * Implements OWASP-recommended approach for secure expression evaluation
+   */
+  safeStackEvaluate(expression, context) {
+    // Whitelist of allowed operations (OWASP recommended approach)
+    const allowedOperations = new Set([
+      '+', '-', '*', '/', '%', '**', '===', '!==', '==', '!=',
+      '<', '>', '<=', '>=', '&&', '||', '!', '?', ':', '??'
+    ]);
+    
+    // Whitelist of allowed literals
+    const allowedLiterals = new Set([
+      'true', 'false', 'null', 'undefined', 'NaN', 'Infinity'
+    ]);
+
+    // Sanitize input to prevent injection attacks
+    const sanitized = expression
+      .replace(/[^0-9a-zA-Z_ \t+\-*/%().,<>=!&|?:'"\[\]\{\},]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Parse expression into safe tokens
+    const tokens = this.parseExpressionTokens(sanitized);
+    
+    // Evaluate safely using stack-based approach
+    return this.evaluateTokens(tokens, context, allowedOperations, allowedLiterals);
+  }
+
+  /**
+   * Parse expression into safe tokens
+   */
+  parseExpressionTokens(expression) {
+    const tokens = [];
+    let current = '';
+    
+    for (let i = 0; i < expression.length; i++) {
+      const char = expression[i];
+      
+      if (this.isOperatorChar(char)) {
+        if (current) {
+          tokens.push(this.createSafeToken(current));
+          current = '';
+        }
+        tokens.push(this.createSafeToken(char));
+      } else if (char === ' ') {
+        if (current) {
+          tokens.push(this.createSafeToken(current));
+          current = '';
+        }
+      } else {
+        current += char;
+      }
+    }
+    
+    if (current) {
+      tokens.push(this.createSafeToken(current));
+    }
+    
+    return tokens;
+  }
+
+  /**
+   * Check if character is an operator
+   */
+  isOperatorChar(char) {
+    return ['+', '-', '*', '/', '%', '=', '!', '<', '>', '&', '|', '?', ':', '(', ')', '[', ']', '{', '}', ',', '.'].includes(char);
+  }
+
+  /**
+   * Create safe token
+   */
+  createSafeToken(value) {
+    if (this.isNumber(value)) {
+      return { type: 'number', value: parseFloat(value) };
+    } else if (this.isString(value)) {
+      return { type: 'string', value: this.parseString(value) };
+    } else if (['true', 'false', 'null', 'undefined', 'NaN', 'Infinity'].includes(value)) {
+      return { type: 'literal', value: this.getLiteralValue(value) };
+    } else if (['+', '-', '*', '/', '%', '**', '===', '!==', '==', '!=', '<', '>', '<=', '>=', '&&', '||', '!', '?', ':', '??'].includes(value)) {
+      return { type: 'operator', value };
+    } else if (this.isIdentifier(value)) {
+      return { type: 'identifier', value };
+    } else {
+      throw new Error(`Invalid token: ${value}`);
+    }
+  }
+
+  /**
+   * Check if value is a number
+   */
+  isNumber(value) {
+    return /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(value);
+  }
+
+  /**
+   * Check if value is a string
+   */
+  isString(value) {
+    return (value.startsWith('"') && value.endsWith('"')) || 
+           (value.startsWith("'") && value.endsWith("'"));
+  }
+
+  /**
+   * Parse string value
+   */
+  parseString(value) {
+    return value.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'");
+  }
+
+  /**
+   * Check if value is valid identifier
+   */
+  isIdentifier(value) {
+    return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value);
+  }
+
+  /**
+   * Get literal value
+   */
+  getLiteralValue(literal) {
+    const literals = {
+      'true': true,
+      'false': false,
+      'null': null,
+      'undefined': undefined,
+      'NaN': NaN,
+      'Infinity': Infinity
+    };
+    return literals[literal];
+  }
+
+  /**
+   * Evaluate tokens safely using stack-based approach
+   */
+  evaluateTokens(tokens, context, allowedOperations, allowedLiterals) {
+    const stack = [];
+    
+    for (const token of tokens) {
+      if (token.type === 'number' || token.type === 'string' || token.type === 'literal') {
+        stack.push(token.value);
+      } else if (token.type === 'identifier') {
+        if (context.hasOwnProperty(token.value)) {
+          stack.push(context[token.value]);
+        } else {
+          throw new Error(`Undefined variable: ${token.value}`);
+        }
+      } else if (token.type === 'operator') {
+        this.applyOperator(token.value, stack);
+      }
+    }
+    
+    if (stack.length !== 1) {
+      throw new Error('Invalid expression');
+    }
+    
+    return stack[0];
+  }
+
+  /**
+   * Apply operator to stack
+   */
+  applyOperator(operator, stack) {
+    if (stack.length < 2) {
+      throw new Error(`Insufficient operands for operator: ${operator}`);
+    }
+    
+    const b = stack.pop();
+    const a = stack.pop();
+    
+    let result;
+    
+    switch (operator) {
+      case '+': result = a + b; break;
+      case '-': result = a - b; break;
+      case '*': result = a * b; break;
+      case '/': result = b !== 0 ? a / b : NaN; break;
+      case '%': result = b !== 0 ? a % b : NaN; break;
+      case '**': result = Math.pow(a, b); break;
+      case '==': result = a == b; break;
+      case '===': result = a === b; break;
+      case '!=': result = a != b; break;
+      case '!==': result = a !== b; break;
+      case '<': result = a < b; break;
+      case '>': result = a > b; break;
+      case '<=': result = a <= b; break;
+      case '>=': result = a >= b; break;
+      case '&&': result = a && b; break;
+      case '||': result = a || b; break;
+      default:
+        throw new Error(`Unsupported operator: ${operator}`);
+    }
+    
+    stack.push(result);
   }
 
   async getAPIKeyForProvider(provider) {
