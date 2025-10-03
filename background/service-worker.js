@@ -429,12 +429,20 @@ async function injectContentScriptIfNeeded(tabId) {
     if (!isInjected) {
       console.log('[ServiceWorker] Injecting content script dynamically');
       
+      // Inject minimal content script (ISOLATED world)
       await chrome.scripting.executeScript({
         target: { tabId: tabId },
         files: ['content/content-script.js']
       });
       
-      console.log('[ServiceWorker] ✅ Content script injected successfully');
+      // Inject page bridge for site-specific integrations (MAIN world)
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['content/inject-page-bridge.js'],
+        world: 'MAIN'
+      });
+      
+      console.log('[ServiceWorker] ✅ Content script and page bridge injected successfully');
     }
     
   } catch (error) {

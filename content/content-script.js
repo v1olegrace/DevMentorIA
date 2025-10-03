@@ -1,161 +1,410 @@
 /**
- * DevMentor AI - Content Script (Demo Version)
- * Minimal implementation for hackathon demonstration
+ * DevMentor AI - Minimal Content Script (Dynamic Injection)
+ * Injected only when needed via chrome.scripting.executeScript
+ * Optimized for performance and security
  */
 
-class DevMentorContentScript {
+// Mark as injected to prevent duplicate injection
+window.__DEVMENTOR_CONTENT_SCRIPT_INJECTED__ = true;
+
+class MinimalContentScript {
   constructor() {
     this.isInitialized = false;
-    this.logger = {
-      debug: (...args) => console.debug('[ContentScript]', ...args),
-      info: (...args) => console.info('[ContentScript]', ...args),
-      warn: (...args) => console.warn('[ContentScript]', ...args),
-      error: (...args) => console.error('[ContentScript]', ...args)
-    };
-    
+    this.messageHandlers = new Map();
     this.init();
   }
 
-  /**
-   * Initialize content script (Demo Mode)
-   */
   async init() {
+    if (this.isInitialized) {
+      return;
+    }
+
     try {
-      this.logger.info('DevMentor AI Content Script - Demo Mode');
+      console.log('[ContentScript] Minimal content script initialized');
       
-      // Setup basic event listeners
-      this.setupEventListeners();
+      // Set up message handlers
+      this.setupMessageHandlers();
+      
+      // Set up keyboard shortcuts
+      this.setupKeyboardHandlers();
       
       this.isInitialized = true;
-      this.logger.info('Content script initialized successfully');
+      console.log('[ContentScript] ✅ Setup completed');
       
     } catch (error) {
-      this.logger.error('Content script initialization failed:', error);
+      console.error('[ContentScript] Initialization failed:', error);
     }
   }
 
-  /**
-   * Setup event listeners (Demo)
-   */
-  setupEventListeners() {
-    // Listen for messages from popup/background
+  setupMessageHandlers() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      this.handleMessage(request, sender, sendResponse);
-      return true; // Keep message channel open
+      const handler = this.messageHandlers.get(request.action);
+      
+      if (handler) {
+        handler(request, sender, sendResponse);
+        return true; // Keep message channel open for async response
+      }
+      
+      console.warn('[ContentScript] Unknown message action:', request.action);
+      sendResponse({ success: false, error: `Unknown action: ${request.action}` });
+      return false;
     });
 
-    // Keyboard shortcuts are now handled by chrome.commands in service worker
-    // No need for content script keyboard handling
+    // Register message handlers
+    this.messageHandlers.set('explain-selection', this.handleExplainSelection.bind(this));
+    this.messageHandlers.set('debug-selection', this.handleDebugSelection.bind(this));
+    this.messageHandlers.set('document-selection', this.handleDocumentSelection.bind(this));
+    this.messageHandlers.set('refactor-selection', this.handleRefactorSelection.bind(this));
+    this.messageHandlers.set('show-analysis-result', this.showAnalysisResult.bind(this));
+    this.messageHandlers.set('show-analysis-error', this.showAnalysisError.bind(this));
   }
 
-  /**
-   * Handle messages (Demo)
-   */
-  handleMessage(request, sender, sendResponse) {
-    this.logger.debug('Received message:', request);
-    
-    switch (request.action) {
-      case 'ping':
-        // Respond to ping for injection detection
-        sendResponse({ success: true, injected: true });
-        break;
-        
-      case 'getSelectedCode':
-        sendResponse({ 
-          success: true, 
-          code: this.getSelectedText(),
-          language: this.detectLanguage()
-        });
-        break;
-        
-      case 'analyzeCode':
-        this.analyzeCodeDemo(request.code, request.type)
-          .then(result => sendResponse(result))
-          .catch(error => sendResponse({ success: false, error: error.message }));
-        break;
-        
-      default:
-        sendResponse({ success: false, error: 'Unknown action' });
+  async handleExplainSelection(request, sender, sendResponse) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'explain-code',
+        code: request.code,
+        context: { url: window.location.href }
+      });
+
+      sendResponse(response);
+    } catch (error) {
+      console.error('[ContentScript] Explain selection failed:', error);
+      sendResponse({ success: false, error: error.message });
     }
   }
 
-  /**
-   * Get selected text (Demo)
-   */
-  getSelectedText() {
-    const selection = window.getSelection();
-    return selection.toString().trim();
+  async handleDebugSelection(request, sender, sendResponse) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'debug-code',
+        code: request.code,
+        context: { url: window.location.href }
+      });
+
+      sendResponse(response);
+    } catch (error) {
+      console.error('[ContentScript] Debug selection failed:', error);
+      sendResponse({ success: false, error: error.message });
+    }
   }
 
-  /**
-   * Detect programming language (Demo)
-   */
-  detectLanguage() {
-    const url = window.location.href;
-    if (url.includes('github.com')) return 'javascript';
-    if (url.includes('python')) return 'python';
-    if (url.includes('java')) return 'java';
-    return 'javascript'; // Default
+  async handleDocumentSelection(request, sender, sendResponse) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'document-code',
+        code: request.code,
+        context: { url: window.location.href }
+      });
+
+      sendResponse(response);
+    } catch (error) {
+      console.error('[ContentScript] Document selection failed:', error);
+      sendResponse({ success: false, error: error.message });
+    }
   }
 
-  /**
-   * Analyze code (Demo)
-   */
-  async analyzeCodeDemo(code, type) {
-    this.logger.info(`Demo analysis: ${type} for code`);
+  async handleRefactorSelection(request, sender, sendResponse) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'refactor-code',
+        code: request.code,
+        context: { url: window.location.href }
+      });
+
+      sendResponse(response);
+    } catch (error) {
+      console.error('[ContentScript] Refactor selection failed:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  setupKeyboardHandlers() {
+    document.addEventListener('keydown', (event) => {
+      // Handle extension shortcuts
+      if (event.ctrlKey && event.shiftKey) {
+        switch (event.key) {
+          case 'E':
+            event.preventDefault();
+            this.handleExplainShortcut();
+            break;
+          case 'B':
+            event.preventDefault();
+            this.handleDebugShortcut();
+            break;
+          case 'G':
+            event.preventDefault();
+            this.handleDocumentShortcut();
+            break;
+          case 'R':
+            event.preventDefault();
+            this.handleRefactorShortcut();
+            break;
+        }
+      }
+    });
+  }
+
+  async handleExplainShortcut() {
+    const selectedCode = window.getSelection().toString().trim();
+    if (!selectedCode) {
+      this.showNotification('Please select some code first', 'warning');
+      return;
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'explain-code',
+        code: selectedCode,
+        context: { url: window.location.href }
+      });
+
+      if (response.success) {
+        this.showAnalysisResult({
+          type: 'explanation',
+          result: response.data,
+          code: selectedCode
+        });
+      } else {
+        this.showAnalysisError({
+          type: 'explanation',
+          error: response.error
+        });
+      }
+    } catch (error) {
+      console.error('[ContentScript] Explain shortcut failed:', error);
+      this.showNotification('Failed to explain code', 'error');
+    }
+  }
+
+  async handleDebugShortcut() {
+    const selectedCode = window.getSelection().toString().trim();
+    if (!selectedCode) {
+      this.showNotification('Please select some code first', 'warning');
+      return;
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'debug-code',
+        code: selectedCode,
+        context: { url: window.location.href }
+      });
+
+      if (response.success) {
+        this.showAnalysisResult({
+          type: 'debug',
+          result: response.data,
+          code: selectedCode
+        });
+      } else {
+        this.showAnalysisError({
+          type: 'debug',
+          error: response.error
+        });
+      }
+    } catch (error) {
+      console.error('[ContentScript] Debug shortcut failed:', error);
+      this.showNotification('Failed to debug code', 'error');
+    }
+  }
+
+  async handleDocumentShortcut() {
+    const selectedCode = window.getSelection().toString().trim();
+    if (!selectedCode) {
+      this.showNotification('Please select some code first', 'warning');
+      return;
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'document-code',
+        code: selectedCode,
+        context: { url: window.location.href }
+      });
+
+      if (response.success) {
+        this.showAnalysisResult({
+          type: 'documentation',
+          result: response.data,
+          code: selectedCode
+        });
+      } else {
+        this.showAnalysisError({
+          type: 'documentation',
+          error: response.error
+        });
+      }
+    } catch (error) {
+      console.error('[ContentScript] Document shortcut failed:', error);
+      this.showNotification('Failed to generate documentation', 'error');
+    }
+  }
+
+  async handleRefactorShortcut() {
+    const selectedCode = window.getSelection().toString().trim();
+    if (!selectedCode) {
+      this.showNotification('Please select some code first', 'warning');
+      return;
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'refactor-code',
+        code: selectedCode,
+        context: { url: window.location.href }
+      });
+
+      if (response.success) {
+        this.showAnalysisResult({
+          type: 'refactor',
+          result: response.data,
+          code: selectedCode
+        });
+      } else {
+        this.showAnalysisError({
+          type: 'refactor',
+          error: response.error
+        });
+      }
+    } catch (error) {
+      console.error('[ContentScript] Refactor shortcut failed:', error);
+      this.showNotification('Failed to refactor code', 'error');
+    }
+  }
+
+  showAnalysisResult(request) {
+    const tooltip = this.createAnalysisTooltip(request);
+    document.body.appendChild(tooltip);
     
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Auto-remove after 30 seconds
+    setTimeout(() => {
+      if (tooltip.parentNode) {
+        tooltip.remove();
+      }
+    }, 30000);
+  }
+
+  showAnalysisError(request) {
+    const errorTooltip = this.createErrorTooltip(request);
+    document.body.appendChild(errorTooltip);
     
-    return {
-      success: true,
-      result: `Demo ${type} result: Code analyzed successfully!`,
-      timestamp: new Date().toISOString(),
-      language: this.detectLanguage()
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+      if (errorTooltip.parentNode) {
+        errorTooltip.remove();
+      }
+    }, 10000);
+  }
+
+  createAnalysisTooltip(request) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'devmentor-analysis-tooltip';
+    tooltip.innerHTML = `
+      <div class="tooltip-header">
+        <span class="tooltip-title">${this.getTooltipTitle(request.type)}</span>
+        <button class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="tooltip-content">
+        <div class="analysis-result">${this.formatAnalysisResult(request.result)}</div>
+        <div class="tooltip-footer">
+          <button class="copy-btn">Copy</button>
+          <button class="expand-btn">Expand</button>
+        </div>
+      </div>
+    `;
+    
+    // Add event listeners
+    tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
+    tooltip.querySelector('.copy-btn').onclick = () => this.copyToClipboard(request.result);
+    tooltip.querySelector('.expand-btn').onclick = () => this.expandTooltip(tooltip);
+    
+    return tooltip;
+  }
+
+  createErrorTooltip(request) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'devmentor-error-tooltip';
+    tooltip.innerHTML = `
+      <div class="error-header">
+        <span class="error-title">Error: ${this.getTooltipTitle(request.type)}</span>
+        <button class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="error-content">
+        <div class="error-message">${request.error}</div>
+      </div>
+    `;
+    
+    tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
+    
+    return tooltip;
+  }
+
+  getTooltipTitle(type) {
+    const titles = {
+      'explanation': 'Code Explanation',
+      'debug': 'Debug Analysis',
+      'documentation': 'Documentation',
+      'refactor': 'Code Refactoring'
     };
+    return titles[type] || 'Analysis';
   }
 
-  // Keyboard shortcuts are now handled by chrome.commands in service worker
-  // This provides better reliability and avoids conflicts
-
-  /**
-   * Show demo notification
-   */
-  showDemoNotification(type, result) {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #4285f4;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      max-width: 300px;
-    `;
+  formatAnalysisResult(result) {
+    if (typeof result === 'string') {
+      return result;
+    }
     
-    notification.innerHTML = `
-      <div style="font-weight: 600; margin-bottom: 4px;">DevMentor AI Demo</div>
-      <div>${type.charAt(0).toUpperCase() + type.slice(1)}: ${result}</div>
-    `;
+    if (result.explanation) {
+      return result.explanation;
+    }
+    
+    if (result.debugInfo) {
+      return result.debugInfo;
+    }
+    
+    if (result.documentation) {
+      return result.documentation;
+    }
+    
+    if (result.refactoredCode) {
+      return result.refactoredCode;
+    }
+    
+    return JSON.stringify(result, null, 2);
+  }
+
+  async copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      this.showNotification('Copied to clipboard', 'success');
+    } catch (error) {
+      console.error('[ContentScript] Copy failed:', error);
+      this.showNotification('Failed to copy', 'error');
+    }
+  }
+
+  expandTooltip(tooltip) {
+    tooltip.classList.toggle('expanded');
+  }
+
+  showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `devmentor-notification devmentor-notification-${type}`;
+    notification.textContent = message;
     
     document.body.appendChild(notification);
     
-    // Auto remove after 3 seconds
+    // Auto-remove after 3 seconds
     setTimeout(() => {
       if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
+        notification.remove();
       }
     }, 3000);
   }
 }
 
-// Initialize content script
-if (typeof window !== 'undefined') {
-  new DevMentorContentScript();
-}
+// Initialize minimal content script
+const minimalContentScript = new MinimalContentScript();
 
+console.log('[ContentScript] ✅ Minimal content script loaded');
