@@ -1,31 +1,100 @@
-# DevMentor AI - .gitignore
+# DevMentor AI - Git Ignore
+# Excludes private files and build artifacts
 
-# Logs
-logs
-*.log
+# Private files
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+private/
+credentials/
+
+# Build artifacts
+dist/
+build/
+out/
+*.tgz
+*.tar.gz
+
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Coverage directory used by tools like istanbul
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test files
 coverage/
-*.lcov
+.nyc_output/
+test-results/
+*.test.js
+*.spec.js
 
-# nyc test coverage
-.nyc_output
+# Logs
+logs/
+*.log
 
-# Dependency directories
-node_modules/
-jspm_packages/
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Chrome extension specific
+*.crx
+*.pem
+web-accessible-resources/
+
+# Documentation (keep only public docs)
+docs/private/
+docs/internal/
+README_PRIVATE.md
+SETUP_PRIVATE.md
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Lock files (keep package-lock.json for consistency)
+yarn.lock
+pnpm-lock.yaml
+
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettiercache
+
+# TypeScript cache
+*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
 
 # Optional REPL history
 .node_repl_history
@@ -36,75 +105,25 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-.env.test
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Next.js build output
+.next
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Nuxt.js build / generate output
+.nuxt
+dist
 
-# Chrome Extension specific
-*.crx
-*.pem
-key.pem
+# Gatsby files
+.cache/
+public
 
-# Build outputs
-dist/
-build/
-out/
+# Storybook build outputs
+.out
+.storybook-out
 
-# Temporary files
-.tmp/
+# Temporary folders
+tmp/
 temp/
-*.tmp
-
-# API keys and secrets (IMPORTANT!)
-secrets/
-*.key
-api-keys.json
-config.secret.json
-
-# User data and analytics
-user-data/
-analytics/
-*.analytics
-
-# Development tools
-.eslintcache
-.stylelintcache
-
-# Package managers
-package-lock.json
-yarn.lock
-
-# Chrome extension store assets
-store-assets/
-screenshots/
-promotional/
-
-# Documentation builds
-docs/_build/
-docs/.doctrees/
-
-# Testing
-test-results/
-coverage/
-.jest/
-
-# Backup files
-*.bak
-*.backup
-*~

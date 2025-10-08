@@ -302,6 +302,107 @@ Provide the refactored code in the same language with clear explanations.`;
     }
   }
 
+  // Document code method
+  async documentCode(code, context = {}) {
+    if (!this.isAvailable) {
+      await this.initialize();
+    }
+
+    try {
+      const prompt = this.buildDocumentPrompt(code, context);
+      
+      const response = await this.session.prompt(prompt);
+      
+      return {
+        documentation: response.text,
+        type: 'documentation',
+        timestamp: Date.now(),
+        context: context
+      };
+      
+    } catch (error) {
+      console.error('[ChromeAI] Generate documentation failed:', error);
+      throw new Error(`Failed to generate documentation: ${error.message}`);
+    }
+  }
+
+  // Review code method
+  async reviewCode(code, context = {}) {
+    if (!this.isAvailable) {
+      await this.initialize();
+    }
+
+    try {
+      const prompt = this.buildReviewPrompt(code, context);
+      
+      const response = await this.session.prompt(prompt);
+      
+      return {
+        review: response.text,
+        type: 'review',
+        timestamp: Date.now(),
+        context: context
+      };
+      
+    } catch (error) {
+      console.error('[ChromeAI] Code review failed:', error);
+      throw new Error(`Failed to review code: ${error.message}`);
+    }
+  }
+
+  buildDocumentPrompt(code, context) {
+    const language = this.detectLanguage(code);
+    const url = context.url || 'unknown';
+    
+    return `You are an expert software engineer. Generate comprehensive documentation for the following ${language} code:
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Context:
+- Source: ${url}
+- Language: ${language}
+
+Please provide:
+1. Function/class description
+2. Parameter documentation
+3. Return value documentation
+4. Usage examples
+5. Notes and warnings
+6. Related functions/classes
+
+Format the documentation in a clear, professional manner suitable for developers.`;
+  }
+
+  buildReviewPrompt(code, context) {
+    const language = this.detectLanguage(code);
+    const url = context.url || 'unknown';
+    
+    return `You are an expert code reviewer. Perform a comprehensive code review of the following ${language} code:
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Context:
+- Source: ${url}
+- Language: ${language}
+
+Please provide:
+1. Code quality assessment (1-10 scale)
+2. Potential bugs or issues
+3. Performance considerations
+4. Security concerns
+5. Best practices adherence
+6. Suggestions for improvement
+7. Overall recommendation
+
+Be thorough but constructive in your review.`;
+  }
+
   // Cleanup method
   async destroy() {
     try {
@@ -319,3 +420,10 @@ Provide the refactored code in the same language with clear explanations.`;
     }
   }
 }
+
+
+
+
+
+
+

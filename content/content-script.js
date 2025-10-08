@@ -57,6 +57,9 @@ class MinimalContentScript {
     this.messageHandlers.set('refactor-selection', this.handleRefactorSelection.bind(this));
     this.messageHandlers.set('show-analysis-result', this.showAnalysisResult.bind(this));
     this.messageHandlers.set('show-analysis-error', this.showAnalysisError.bind(this));
+    this.messageHandlers.set('inject-sidebar', this.handleInjectSidebar.bind(this));
+    this.messageHandlers.set('triggerAnalysis', this.handleTriggerAnalysis.bind(this));
+    this.messageHandlers.set('getSelectedCode', this.handleGetSelectedCode.bind(this));
   }
 
   async handleExplainSelection(request, sender, sendResponse) {
@@ -401,6 +404,151 @@ class MinimalContentScript {
         notification.remove();
       }
     }, 3000);
+  }
+  }
+
+  }
+
+  // Handle trigger analysis from React popup
+  async handleTriggerAnalysis(request, sender, sendResponse) {
+    try {
+      console.log('[ContentScript] Trigger analysis requested:', request);
+      
+      // Obter código selecionado
+      const selectedText = window.getSelection().toString();
+      
+      if (!selectedText.trim()) {
+        sendResponse({ 
+          success: false, 
+          error: 'No code selected. Please select some code first.' 
+        });
+        return;
+      }
+
+      // Enviar para background script para análise
+      const response = await chrome.runtime.sendMessage({
+        action: 'triggerAnalysis',
+        type: request.type,
+        timestamp: Date.now()
+      });
+
+      sendResponse(response);
+
+    } catch (error) {
+      console.error('[ContentScript] Trigger analysis failed:', error);
+      sendResponse({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Handle get selected code request
+  async handleGetSelectedCode(request, sender, sendResponse) {
+    try {
+      const selectedText = window.getSelection().toString();
+      
+      if (!selectedText.trim()) {
+        sendResponse({ 
+          success: false, 
+          error: 'No code selected' 
+        });
+        return;
+      }
+
+      sendResponse({
+        success: true,
+        code: selectedText,
+        url: window.location.href
+      });
+
+    } catch (error) {
+      console.error('[ContentScript] Get selected code failed:', error);
+      sendResponse({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Handle sidebar injection for React frontend
+  async handleInjectSidebar(request, sender, sendResponse) {
+    try {
+      console.log('[ContentScript] Injecting sidebar for analysis result');
+      
+      const { analysis, type, metadata } = request;
+      
+      // Create sidebar container if it doesn't exist
+      let sidebar = document.getElementById('devmentor-sidebar-root');
+      if (!sidebar) {
+        sidebar = document.createElement('div');
+        sidebar.id = 'devmentor-sidebar-root';
+        sidebar.style.cssText = `
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 400px;
+          height: 100vh;
+          background: white;
+          border-left: 1px solid #e0e0e0;
+          box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+          z-index: 10000;
+          overflow-y: auto;
+          font-family: 'Nunito Sans', system-ui, sans-serif;
+        `;
+        document.body.appendChild(sidebar);
+      }
+
+      // Create analysis result content
+      const analysisContent = document.createElement('div');
+      analysisContent.style.cssText = `
+        padding: 20px;
+        color: #333;
+      `;
+
+      const typeIcons = {
+        explain: '🔍',
+        bugs: '🐛',
+        docs: '📝',
+        optimize: '⚡',
+        review: '👀'
+      };
+
+      const typeLabels = {
+        explain: 'Explicação',
+        bugs: 'Análise de Bugs',
+        docs: 'Documentação',
+        optimize: 'Otimização',
+        review: 'Revisão'
+      };
+
+      analysisContent.innerHTML = `
+        <div style="border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; margin-bottom: 20px;">
+          <h2 style="margin: 0; color: #2563eb; font-size: 18px;">
+            ${typeIcons[type] || '📊'} ${typeLabels[type] || type}
+          </h2>
+          <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+            Análise concluída em ${metadata?.processingTime || 0}ms
+          </p>
+        </div>
+        <div style="line-height: 1.6; white-space: pre-wrap;">${analysis}</div>
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+          <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                  style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+            Fechar
+          </button>
+        </div>
+      `;
+
+      sidebar.innerHTML = '';
+      sidebar.appendChild(analysisContent);
+
+      sendResponse({ success: true, message: 'Sidebar injected successfully' });
+
+    } catch (error) {
+      console.error('[ContentScript] Failed to inject sidebar:', error);
+      sendResponse({ success: false, error: error.message });
+    }
   }
 }
 
