@@ -47,28 +47,44 @@ window.DevMentorInject = {
       align-items: center;
     `;
     header.innerHTML = `
-      <span>🔍 DevMentor AI - ${type}</span>
+      <span></span>
       <button id="devmentor-close" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px;">×</button>
     `;
-    
+    // Use textContent to prevent XSS
+    header.querySelector('span').textContent = `🔍 DevMentor AI - ${type}`;
+
     // Create content
     const content = document.createElement('div');
     content.style.cssText = `
       padding: 16px;
       line-height: 1.6;
     `;
-    content.innerHTML = `
-      <div style="white-space: pre-wrap; font-family: 'Monaco', 'Consolas', monospace; background: #f5f5f5; padding: 12px; border-radius: 4px; margin-bottom: 16px;">
-        ${analysis}
-      </div>
-      ${metadata ? `
-        <div style="font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 12px;">
-          <div>Tempo de processamento: ${metadata.processingTime}ms</div>
-          <div>Linguagem: ${metadata.language || 'N/A'}</div>
-          <div>Confiança: ${metadata.confidence ? (metadata.confidence * 100).toFixed(1) + '%' : 'N/A'}</div>
-        </div>
-      ` : ''}
-    `;
+
+    // Create analysis block with textContent to prevent XSS
+    const analysisBlock = document.createElement('div');
+    analysisBlock.style.cssText = 'white-space: pre-wrap; font-family: "Monaco", "Consolas", monospace; background: #f5f5f5; padding: 12px; border-radius: 4px; margin-bottom: 16px;';
+    analysisBlock.textContent = analysis;
+    content.appendChild(analysisBlock);
+
+    // Add metadata if present, using textContent to prevent XSS
+    if (metadata) {
+      const metadataBlock = document.createElement('div');
+      metadataBlock.style.cssText = 'font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 12px;';
+
+      const timeDiv = document.createElement('div');
+      timeDiv.textContent = `Tempo de processamento: ${metadata.processingTime}ms`;
+
+      const langDiv = document.createElement('div');
+      langDiv.textContent = `Linguagem: ${metadata.language || 'N/A'}`;
+
+      const confDiv = document.createElement('div');
+      confDiv.textContent = `Confiança: ${metadata.confidence ? (metadata.confidence * 100).toFixed(1) + '%' : 'N/A'}`;
+
+      metadataBlock.appendChild(timeDiv);
+      metadataBlock.appendChild(langDiv);
+      metadataBlock.appendChild(confDiv);
+      content.appendChild(metadataBlock);
+    }
     
     // Assemble sidebar
     sidebar.appendChild(header);
