@@ -29,10 +29,10 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:;"
+    "extension_pages": "script-src 'self'; object-src 'self';"
   },
   
-  "minimum_chrome_version": "127",
+  "minimum_chrome_version": "88",
   
   "commands": {
     "explain-code": {
@@ -68,17 +68,10 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "content/*"
+        "content/inject.js"
       ],
       "matches": [
-        "https://github.com/*",
-        "https://stackoverflow.com/*",
-        "https://developer.mozilla.org/*",
-        "https://gitlab.com/*",
-        "https://bitbucket.org/*",
-        "https://codepen.io/*",
-        "https://jsfiddle.net/*",
-        "https://codesandbox.io/*"
+        "https://github.com/*"
       ]
     }
   ],
