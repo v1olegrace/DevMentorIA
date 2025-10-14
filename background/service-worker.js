@@ -13,8 +13,6 @@ import { ChromeAI } from './modules/chrome-ai.js';
 // Global state (ephemeral - will be lost on termination)
 let isInitialized = false;
 let activeRequests = new Map();
-let chromeAIInstance = null;
-const REQUEST_TIMEOUT = 30000; // 30 seconds
 
 // Persistent state keys
 const STORAGE_KEYS = {
@@ -91,10 +89,6 @@ async function initializeExtension() {
     // Initialize AI session manager
     const aiSessionManager = new AISessionManager();
     await aiSessionManager.initialize();
-    
-    // Initialize Chrome AI
-    chromeAIInstance = new ChromeAI();
-    await chromeAIInstance.initialize();
     
     // Initialize context menu manager
     const contextMenuManager = new ContextMenuManager();
@@ -310,31 +304,15 @@ async function handleAlarm(alarm) {
 async function handleMessage(message, sender, sendResponse) {
   const requestId = generateRequestId();
   activeRequests.set(requestId, { startTime: Date.now() });
-  
-  // Set timeout for request
-  const timeoutId = setTimeout(() => {
-    if (activeRequests.has(requestId)) {
-      activeRequests.delete(requestId);
-      sendResponse({ 
-        success: false, 
-        error: 'Request timeout',
-        requestId 
-      });
-    }
-  }, REQUEST_TIMEOUT);
-  
+
   try {
-    // Validate message structure
-    if (!message || typeof message.action !== 'string') {
-      throw new Error('Invalid message format');
-    }
-
-    // Check if Chrome AI is available
-    if (!chromeAIInstance && message.action !== 'getAIStatus' && message.action !== 'keep-alive') {
-      throw new Error('Chrome AI not initialized');
-    }
-
     switch (message.action) {
+      case 'getAIStatus':
+        await handleGetAIStatus(message, sender, sendResponse);
+        break;
+      case 'triggerAnalysis':
+        await handleTriggerAnalysis(message, sender, sendResponse);
+        break;
       case 'explain-code':
         await handleExplainCode(message, sender, sendResponse);
         break;
@@ -350,15 +328,6 @@ async function handleMessage(message, sender, sendResponse) {
       case 'inject-sidebar':
         await handleInjectSidebar(message, sender, sendResponse);
         break;
-      case 'triggerAnalysis':
-        await handleTriggerAnalysis(message, sender, sendResponse);
-        break;
-      case 'getAIStatus':
-        await handleGetAIStatus(message, sender, sendResponse);
-        break;
-      case 'analyzeCode':
-        await handleAnalyzeCode(message, sender, sendResponse);
-        break;
       case 'keep-alive':
         sendResponse({ success: true, timestamp: Date.now() });
         break;
@@ -367,29 +336,85 @@ async function handleMessage(message, sender, sendResponse) {
     }
   } catch (error) {
     console.error(`[ServiceWorker] Message handler failed:`, error);
-    sendResponse({ 
-      success: false, 
-      error: error.message || 'Unknown error occurred',
-      requestId 
-    });
+    sendResponse({ success: false, error: error.message });
   } finally {
-    clearTimeout(timeoutId);
     activeRequests.delete(requestId);
   }
 }
 
 // --- MESSAGE HANDLERS ---
+async function handleGetAIStatus(request, sender, sendResponse) {
+  try {
+    const chromeAI = new ChromeAI();
+    await chromeAI.initialize();
+    const status = await chromeAI.getStatus();
+
+    sendResponse({
+      initialized: isInitialized,
+      aiAvailable: status.available,
+      capabilities: status.capabilities || {}
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] Get AI status failed:', error);
+    sendResponse({
+      initialized: isInitialized,
+      aiAvailable: false,
+      error: error.message
+    });
+  }
+}
+
+async function handleTriggerAnalysis(request, sender, sendResponse) {
+  try {
+    const { type } = request;
+    const tab = sender.tab;
+
+    if (!tab) {
+      sendResponse({ success: false, error: 'No active tab' });
+      return;
+    }
+
+    // Inject content script if needed
+    await injectContentScriptIfNeeded(tab.id);
+
+    // Get selected text from the page
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => window.getSelection().toString().trim()
+    });
+
+    const selectedText = result?.result || '';
+
+    if (!selectedText) {
+      sendResponse({ success: false, error: 'No code selected' });
+      return;
+    }
+
+    // Map type to action
+    const actionMap = {
+      'explain': 'explain',
+      'bugs': 'debug',
+      'docs': 'document',
+      'optimize': 'refactor',
+      'review': 'review'
+    };
+
+    const analysisType = actionMap[type] || type;
+
+    // Perform analysis
+    await handleCodeAnalysis(analysisType, { selectionText: selectedText }, tab);
+
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('[ServiceWorker] Trigger analysis failed:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
 async function handleExplainCode(request, sender, sendResponse) {
   try {
-    if (!chromeAIInstance) {
-      throw new Error('Chrome AI not initialized');
-    }
-    
-    if (!request.code || typeof request.code !== 'string') {
-      throw new Error('Valid code is required');
-    }
-    
-    const result = await chromeAIInstance.explainCode(request.code, request.context);
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.explainCode(request.code, request.context);
     
     await trackEvent('code_explained', { 
       codeLength: request.code.length
@@ -405,11 +430,8 @@ async function handleExplainCode(request, sender, sendResponse) {
 
 async function handleDebugCode(request, sender, sendResponse) {
   try {
-    if (!chromeAIInstance) {
-      throw new Error('Chrome AI not initialized');
-    }
-    
-    const result = await chromeAIInstance.debugCode(request.code, request.context);
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.debugCode(request.code, request.context);
     
     await trackEvent('code_debugged', { 
       codeLength: request.code.length
@@ -425,11 +447,8 @@ async function handleDebugCode(request, sender, sendResponse) {
 
 async function handleDocumentCode(request, sender, sendResponse) {
   try {
-    if (!chromeAIInstance) {
-      throw new Error('Chrome AI not initialized');
-    }
-    
-    const result = await chromeAIInstance.generateDocumentation(request.code, request.context);
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.generateDocumentation(request.code, request.context);
     
     await trackEvent('documentation_generated', { 
       codeLength: request.code.length
@@ -445,11 +464,8 @@ async function handleDocumentCode(request, sender, sendResponse) {
 
 async function handleRefactorCode(request, sender, sendResponse) {
   try {
-    if (!chromeAIInstance) {
-      throw new Error('Chrome AI not initialized');
-    }
-    
-    const result = await chromeAIInstance.refactorCode(request.code, request.context);
+    const chromeAI = new ChromeAI();
+    const result = await chromeAI.refactorCode(request.code, request.context);
     
     await trackEvent('code_refactored', { 
       codeLength: request.code.length
@@ -524,10 +540,14 @@ async function injectSidebar(tabId) {
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['content/content-script.js']
+      files: ['content/components/sidebar-injector.js']
     });
     
-    // CSS injection removed - using React frontend with Tailwind CSS
+    await chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ['assets/styles/sidebar.css']
+    });
+    
     console.log('[ServiceWorker] ✅ Sidebar injected successfully');
   } catch (error) {
     console.warn('[ServiceWorker] ⚠️ Sidebar injection failed:', error);
@@ -552,6 +572,9 @@ async function handleCodeAnalysis(type, data, tab) {
         break;
       case 'refactor':
         result = await chromeAI.refactorCode(data.selectionText, { url: tab.url });
+        break;
+      case 'review':
+        result = await chromeAI.reviewCode(data.selectionText, { url: tab.url });
         break;
       default:
         throw new Error(`Unknown analysis type: ${type}`);
@@ -597,199 +620,6 @@ async function performCleanup() {
     console.log('[ServiceWorker] ✅ Cleanup completed');
   } catch (error) {
     console.error('[ServiceWorker] ❌ Cleanup failed:', error);
-  }
-}
-
-// --- REACT FRONTEND HANDLERS ---
-async function handleTriggerAnalysis(request, sender, sendResponse) {
-  try {
-    console.log('[ServiceWorker] Triggering analysis:', request);
-    
-    const { type } = request;
-    
-    if (!type) {
-      throw new Error('Analysis type is required');
-    }
-
-    // Obter código selecionado da aba ativa
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tabs[0]?.id) {
-      throw new Error('No active tab found');
-    }
-
-    // Injetar content script para obter código selecionado
-    await chrome.scripting.executeScript({
-      target: { tabId: tabs[0].id },
-      files: ['content/content-script.js']
-    });
-
-    // Enviar mensagem para content script obter código selecionado
-    const response = await chrome.tabs.sendMessage(tabs[0].id, {
-      action: 'getSelectedCode'
-    });
-
-    if (!response.success || !response.code) {
-      throw new Error('No code selected. Please select some code first.');
-    }
-
-    // Analisar código usando Chrome AI
-    if (!chromeAIInstance) {
-      throw new Error('Chrome AI not initialized');
-    }
-    
-    let result;
-
-    switch (type) {
-      case 'explain':
-        result = await chromeAIInstance.explainCode(response.code, { url: tabs[0].url });
-        break;
-      case 'bugs':
-        result = await chromeAIInstance.debugCode(response.code, { url: tabs[0].url });
-        break;
-      case 'docs':
-        result = await chromeAIInstance.generateDocumentation(response.code, { url: tabs[0].url });
-        break;
-      case 'optimize':
-        result = await chromeAIInstance.refactorCode(response.code, { url: tabs[0].url });
-        break;
-      case 'review':
-        result = await chromeAIInstance.reviewCode(response.code, { url: tabs[0].url });
-        break;
-      default:
-        throw new Error(`Unknown analysis type: ${type}`);
-    }
-
-    // Enviar resultado para content script para exibir na sidebar
-    await chrome.tabs.sendMessage(tabs[0].id, {
-      action: 'inject-sidebar',
-      analysis: result.explanation || result.refactoredCode || result.documentation || result.review,
-      type,
-      metadata: {
-        processingTime: Date.now() - request.timestamp,
-        language: 'javascript',
-        confidence: 0.95
-      }
-    });
-
-    // Track the analysis
-    await trackEvent('code_analyzed', { 
-      analysisType: type,
-      codeLength: response.code.length,
-      url: tabs[0].url
-    });
-
-    sendResponse({
-      success: true,
-      message: 'Analysis completed successfully'
-    });
-
-  } catch (error) {
-    console.error('[ServiceWorker] Trigger analysis failed:', error);
-    await trackEvent('code_analysis_failed', { 
-      error: error.message,
-      analysisType: request.type 
-    });
-    sendResponse({ 
-      success: false, 
-      error: error.message
-    });
-  }
-}
-
-async function handleGetAIStatus(request, sender, sendResponse) {
-  try {
-    if (!chromeAIInstance) {
-      // Try to initialize if not available
-      try {
-        chromeAIInstance = new ChromeAI();
-        await chromeAIInstance.initialize();
-      } catch (initError) {
-        console.warn('[ServiceWorker] Failed to initialize Chrome AI:', initError);
-      }
-    }
-    
-    sendResponse({
-      initialized: !!chromeAIInstance,
-      aiAvailable: chromeAIInstance?.isAvailable || false
-    });
-  } catch (error) {
-    console.error('[ServiceWorker] Get AI status failed:', error);
-    sendResponse({
-      initialized: false,
-      aiAvailable: false
-    });
-  }
-}
-
-// --- REACT FRONTEND HANDLER ---
-async function handleAnalyzeCode(request, sender, sendResponse) {
-  try {
-    console.log('[ServiceWorker] Analyzing code:', request.payload);
-    
-    const { code, analysisType, options } = request.payload;
-    
-    if (!code || !analysisType) {
-      throw new Error('Code and analysis type are required');
-    }
-
-    // Use Chrome AI for analysis
-    if (!chromeAIInstance) {
-      throw new Error('Chrome AI not initialized');
-    }
-    
-    let result;
-
-    switch (analysisType) {
-      case 'explain':
-        result = await chromeAIInstance.explainCode(code, options);
-        break;
-      case 'bugs':
-        result = await chromeAIInstance.debugCode(code, options);
-        break;
-      case 'docs':
-        result = await chromeAIInstance.generateDocumentation(code, options);
-        break;
-      case 'optimize':
-        result = await chromeAIInstance.refactorCode(code, options);
-        break;
-      case 'review':
-        result = await chromeAIInstance.reviewCode(code, options);
-        break;
-      default:
-        throw new Error(`Unknown analysis type: ${analysisType}`);
-    }
-
-    // Track the analysis
-    await trackEvent('code_analyzed', { 
-      analysisType,
-      codeLength: code.length,
-      language: options?.language || 'unknown'
-    });
-
-    // Return result in format expected by React frontend
-    sendResponse({
-      success: true,
-      analysis: result,
-      type: analysisType,
-      processingTime: Date.now() - request.payload.timestamp,
-      metadata: {
-        language: options?.language || 'javascript',
-        confidence: 0.95,
-        tokensUsed: code.length * 0.1 // Estimate
-      }
-    });
-
-  } catch (error) {
-    console.error('[ServiceWorker] Analyze code failed:', error);
-    await trackEvent('code_analysis_failed', { 
-      error: error.message,
-      analysisType: request.payload?.analysisType 
-    });
-    sendResponse({ 
-      success: false, 
-      error: error.message,
-      analysis: `Erro na análise: ${error.message}`
-    });
   }
 }
 
