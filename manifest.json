@@ -68,10 +68,17 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "content/inject.js"
+        "content/*"
       ],
       "matches": [
-        "https://github.com/*"
+        "https://github.com/*",
+        "https://stackoverflow.com/*",
+        "https://developer.mozilla.org/*",
+        "https://gitlab.com/*",
+        "https://bitbucket.org/*",
+        "https://codepen.io/*",
+        "https://jsfiddle.net/*",
+        "https://codesandbox.io/*"
       ]
     }
   ],
