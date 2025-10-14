@@ -95,12 +95,21 @@ window.DevMentorInject = {
     
     // Add close functionality
     const closeBtn = sidebar.querySelector('#devmentor-close');
-    closeBtn.addEventListener('click', () => {
+    let autoCloseTimer;
+
+    const closeSidebar = () => {
       sidebar.remove();
+      if (autoCloseTimer) {
+        clearTimeout(autoCloseTimer);
+      }
+    };
+
+    closeBtn.addEventListener('click', () => {
+      closeSidebar();
     });
-    
+
     // Auto-close after 30 seconds
-    setTimeout(() => {
+    autoCloseTimer = setTimeout(() => {
       if (document.body.contains(sidebar)) {
         sidebar.remove();
       }
