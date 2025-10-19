@@ -507,3 +507,14 @@ console.log('🎨', window.DevMentorIndex.info.availableMetaphors, 'metáforas d
 
 
 
+
+
+
+
+
+
+
+
+
+
+

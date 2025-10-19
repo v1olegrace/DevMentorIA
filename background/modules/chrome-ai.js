@@ -8,122 +8,189 @@ export class ChromeAI {
     this.isAvailable = false;
     this.session = null;
     this.model = null;
+    this.fallbackMode = false;
+    this.initializationAttempted = false;
   }
 
   async initialize() {
+    if (this.initializationAttempted) {
+      return this.isAvailable;
+    }
+    
+    this.initializationAttempted = true;
+
     try {
       // Check if Chrome Built-in AI is available
-      if (!('ai' in navigator)) {
-        throw new Error('Chrome Built-in AI not available');
+      if (typeof navigator === 'undefined' || !('ai' in navigator)) {
+        console.warn('[ChromeAI] Chrome Built-in AI not available, enabling fallback mode');
+        this.fallbackMode = true;
+        return false;
       }
 
-      // Initialize the language model
-      this.model = await navigator.ai.createLanguageModel({
-        modelId: 'gemini-nano'
-      });
+      // Initialize the language model with timeout
+      const initTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+      );
+
+      this.model = await Promise.race([
+        navigator.ai.createLanguageModel({ modelId: 'gemini-nano' }),
+        initTimeout
+      ]);
 
       // Create a session for the conversation
       this.session = await this.model.createSession();
       
       this.isAvailable = true;
+      this.fallbackMode = false;
       console.log('[ChromeAI] ✅ Chrome Built-in AI initialized successfully');
       
+      return true;
+      
     } catch (error) {
-      console.error('[ChromeAI] ❌ Initialization failed:', error);
+      console.warn('[ChromeAI] ⚠️ Initialization failed, enabling fallback mode:', error.message);
       this.isAvailable = false;
-      throw error;
+      this.fallbackMode = true;
+      return false;
     }
   }
 
   async explainCode(code, context = {}) {
-    if (!this.isAvailable) {
+    // Try to initialize if not already attempted
+    if (!this.initializationAttempted) {
       await this.initialize();
     }
 
-    try {
-      const prompt = this.buildExplainPrompt(code, context);
-      
-      const response = await this.session.prompt(prompt);
-      
-      return {
-        explanation: response.text,
-        type: 'explanation',
-        timestamp: Date.now(),
-        context: context
-      };
-      
-    } catch (error) {
-      console.error('[ChromeAI] Explain code failed:', error);
-      throw new Error(`Failed to explain code: ${error.message}`);
+    // If Chrome AI is available, use it
+    if (this.isAvailable && this.session) {
+      try {
+        const prompt = this.buildExplainPrompt(code, context);
+        const response = await this.session.prompt(prompt);
+        
+        return {
+          explanation: response.text,
+          type: 'explanation',
+          timestamp: Date.now(),
+          context: context,
+          source: 'chrome-ai'
+        };
+      } catch (error) {
+        console.warn('[ChromeAI] Chrome AI failed, falling back to mock response:', error.message);
+        return this.getFallbackExplanation(code, context);
+      }
     }
+
+    // Use fallback response
+    return this.getFallbackExplanation(code, context);
   }
 
   async debugCode(code, context = {}) {
-    if (!this.isAvailable) {
+    // Try to initialize if not already attempted
+    if (!this.initializationAttempted) {
       await this.initialize();
     }
 
-    try {
-      const prompt = this.buildDebugPrompt(code, context);
-      
-      const response = await this.session.prompt(prompt);
-      
-      return {
-        debugInfo: response.text,
-        type: 'debug',
-        timestamp: Date.now(),
-        context: context
-      };
-      
-    } catch (error) {
-      console.error('[ChromeAI] Debug code failed:', error);
-      throw new Error(`Failed to debug code: ${error.message}`);
+    // If Chrome AI is available, use it
+    if (this.isAvailable && this.session) {
+      try {
+        const prompt = this.buildDebugPrompt(code, context);
+        const response = await this.session.prompt(prompt);
+        
+        return {
+          debugInfo: response.text,
+          type: 'debug',
+          timestamp: Date.now(),
+          context: context,
+          source: 'chrome-ai'
+        };
+      } catch (error) {
+        console.warn('[ChromeAI] Chrome AI failed, falling back to mock response:', error.message);
+        return this.getFallbackDebug(code, context);
+      }
     }
+
+    // Use fallback response
+    return this.getFallbackDebug(code, context);
   }
 
   async generateDocumentation(code, context = {}) {
-    if (!this.isAvailable) {
+    // Try to initialize if not already attempted
+    if (!this.initializationAttempted) {
       await this.initialize();
     }
 
-    try {
-      const prompt = this.buildDocumentationPrompt(code, context);
-      
-      const response = await this.session.prompt(prompt);
-      
-      return {
-        documentation: response.text,
-        type: 'documentation',
-        timestamp: Date.now(),
-        context: context
-      };
-      
-    } catch (error) {
-      console.error('[ChromeAI] Generate documentation failed:', error);
-      throw new Error(`Failed to generate documentation: ${error.message}`);
+    // If Chrome AI is available, use it
+    if (this.isAvailable && this.session) {
+      try {
+        const prompt = this.buildDocumentationPrompt(code, context);
+        const response = await this.session.prompt(prompt);
+        
+        return {
+          documentation: response.text,
+          type: 'documentation',
+          timestamp: Date.now(),
+          context: context,
+          source: 'chrome-ai'
+        };
+      } catch (error) {
+        console.warn('[ChromeAI] Chrome AI failed, falling back to mock response:', error.message);
+        return this.getFallbackDocumentation(code, context);
+      }
     }
+
+    // Use fallback response
+    return this.getFallbackDocumentation(code, context);
   }
 
   async refactorCode(code, context = {}) {
+    // Try to initialize if not already attempted
+    if (!this.initializationAttempted) {
+      await this.initialize();
+    }
+
+    // If Chrome AI is available, use it
+    if (this.isAvailable && this.session) {
+      try {
+        const prompt = this.buildRefactorPrompt(code, context);
+        const response = await this.session.prompt(prompt);
+        
+        return {
+          refactoredCode: response.text,
+          improvements: 'Code refactored using Chrome AI',
+          type: 'refactor',
+          timestamp: Date.now(),
+          context: context,
+          source: 'chrome-ai'
+        };
+      } catch (error) {
+        console.warn('[ChromeAI] Chrome AI failed, falling back to mock response:', error.message);
+        return this.getFallbackRefactor(code, context);
+      }
+    }
+
+    // Use fallback response
+    return this.getFallbackRefactor(code, context);
+  }
+
+  async reviewCode(code, context = {}) {
     if (!this.isAvailable) {
       await this.initialize();
     }
 
     try {
-      const prompt = this.buildRefactorPrompt(code, context);
-      
+      const prompt = this.buildReviewPrompt(code, context);
+
       const response = await this.session.prompt(prompt);
-      
+
       return {
-        refactoredCode: response.text,
-        type: 'refactor',
+        review: response.text,
+        type: 'review',
         timestamp: Date.now(),
         context: context
       };
-      
+
     } catch (error) {
-      console.error('[ChromeAI] Refactor code failed:', error);
-      throw new Error(`Failed to refactor code: ${error.message}`);
+      console.error('[ChromeAI] Review code failed:', error);
+      throw new Error(`Failed to review code: ${error.message}`);
     }
   }
 
@@ -209,7 +276,7 @@ Format the documentation in a clear, professional style suitable for API documen
   buildRefactorPrompt(code, context) {
     const language = this.detectLanguage(code);
     const url = context.url || 'unknown';
-    
+
     return `You are a code refactoring expert. Suggest improvements for the following ${language} code:
 
 Code:
@@ -235,6 +302,56 @@ Focus on:
 - Reducing complexity
 
 Provide the refactored code in the same language with clear explanations.`;
+  }
+
+  buildReviewPrompt(code, context) {
+    const language = this.detectLanguage(code);
+    const url = context.url || 'unknown';
+
+    return `You are a senior code reviewer. Perform a comprehensive code review of the following ${language} code:
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Context:
+- Source: ${url}
+- Language: ${language}
+
+Please provide a detailed code review covering:
+
+1. **Code Quality**:
+   - Readability and clarity
+   - Naming conventions
+   - Code organization
+
+2. **Best Practices**:
+   - Language-specific best practices
+   - Design patterns usage
+   - Code structure
+
+3. **Potential Issues**:
+   - Bugs or logical errors
+   - Edge cases not handled
+   - Security concerns
+
+4. **Performance**:
+   - Efficiency considerations
+   - Optimization opportunities
+   - Resource usage
+
+5. **Maintainability**:
+   - Code complexity
+   - Testability
+   - Documentation needs
+
+6. **Suggestions**:
+   - Specific improvements
+   - Priority of changes
+   - Alternative approaches
+
+Provide constructive feedback with specific examples and actionable recommendations.`;
   }
 
   detectLanguage(code) {
@@ -286,7 +403,7 @@ Provide the refactored code in the same language with clear explanations.`;
       if (!this.isAvailable) {
         await this.initialize();
       }
-      
+
       return {
         modelId: 'gemini-nano',
         available: this.isAvailable,
@@ -302,105 +419,94 @@ Provide the refactored code in the same language with clear explanations.`;
     }
   }
 
-  // Document code method
-  async documentCode(code, context = {}) {
-    if (!this.isAvailable) {
-      await this.initialize();
-    }
+  // ============================================================================
+  // FALLBACK METHODS FOR HACKATHON DEMO
+  // ============================================================================
 
-    try {
-      const prompt = this.buildDocumentPrompt(code, context);
-      
-      const response = await this.session.prompt(prompt);
-      
-      return {
-        documentation: response.text,
-        type: 'documentation',
-        timestamp: Date.now(),
-        context: context
-      };
-      
-    } catch (error) {
-      console.error('[ChromeAI] Generate documentation failed:', error);
-      throw new Error(`Failed to generate documentation: ${error.message}`);
-    }
-  }
-
-  // Review code method
-  async reviewCode(code, context = {}) {
-    if (!this.isAvailable) {
-      await this.initialize();
-    }
-
-    try {
-      const prompt = this.buildReviewPrompt(code, context);
-      
-      const response = await this.session.prompt(prompt);
-      
-      return {
-        review: response.text,
-        type: 'review',
-        timestamp: Date.now(),
-        context: context
-      };
-      
-    } catch (error) {
-      console.error('[ChromeAI] Code review failed:', error);
-      throw new Error(`Failed to review code: ${error.message}`);
-    }
-  }
-
-  buildDocumentPrompt(code, context) {
+  getFallbackExplanation(code, context = {}) {
     const language = this.detectLanguage(code);
-    const url = context.url || 'unknown';
+    const lines = code.split('\n').length;
     
-    return `You are an expert software engineer. Generate comprehensive documentation for the following ${language} code:
-
-Code:
-\`\`\`${language}
-${code}
-\`\`\`
-
-Context:
-- Source: ${url}
-- Language: ${language}
-
-Please provide:
-1. Function/class description
-2. Parameter documentation
-3. Return value documentation
-4. Usage examples
-5. Notes and warnings
-6. Related functions/classes
-
-Format the documentation in a clear, professional manner suitable for developers.`;
+    return {
+      explanation: `This ${language} code appears to be ${lines} lines long. In a real implementation, this would be analyzed by Chrome's built-in AI (Gemini Nano) to provide detailed explanations, but for demo purposes, we're showing a fallback response. The actual Chrome AI integration would provide comprehensive code analysis including concepts, patterns, and best practices.`,
+      type: 'explanation',
+      timestamp: Date.now(),
+      context: context,
+      source: 'fallback',
+      language: language,
+      lines: lines,
+      note: 'Chrome AI not available - showing demo response'
+    };
   }
 
-  buildReviewPrompt(code, context) {
+  getFallbackDebug(code, context = {}) {
     const language = this.detectLanguage(code);
-    const url = context.url || 'unknown';
     
-    return `You are an expert code reviewer. Perform a comprehensive code review of the following ${language} code:
+    return {
+      debugInfo: `Debug analysis for ${language} code: This is a fallback response for demonstration purposes. In production, Chrome's built-in AI would analyze the code for potential bugs, performance issues, and security vulnerabilities. The analysis would include specific line-by-line feedback and suggestions for improvement.`,
+      type: 'debug',
+      timestamp: Date.now(),
+      context: context,
+      source: 'fallback',
+      language: language,
+      note: 'Chrome AI not available - showing demo response'
+    };
+  }
 
-Code:
-\`\`\`${language}
-${code}
-\`\`\`
+  getFallbackDocumentation(code, context = {}) {
+    const language = this.detectLanguage(code);
+    
+    return {
+      documentation: `Documentation for ${language} code: This is a fallback response for demonstration purposes. In production, Chrome's built-in AI would generate comprehensive documentation including function descriptions, parameter details, return values, examples, and usage notes following industry standards.`,
+      type: 'documentation',
+      timestamp: Date.now(),
+      context: context,
+      source: 'fallback',
+      language: language,
+      note: 'Chrome AI not available - showing demo response'
+    };
+  }
 
-Context:
-- Source: ${url}
-- Language: ${language}
+  getFallbackRefactor(code, context = {}) {
+    const language = this.detectLanguage(code);
+    
+    return {
+      refactoredCode: code, // Return original code for demo
+      improvements: `Refactoring suggestions for ${language} code: This is a fallback response for demonstration purposes. In production, Chrome's built-in AI would provide optimized versions of the code with improved readability, performance, and maintainability, along with detailed explanations of the changes made.`,
+      type: 'refactor',
+      timestamp: Date.now(),
+      context: context,
+      source: 'fallback',
+      language: language,
+      note: 'Chrome AI not available - showing demo response'
+    };
+  }
 
-Please provide:
-1. Code quality assessment (1-10 scale)
-2. Potential bugs or issues
-3. Performance considerations
-4. Security concerns
-5. Best practices adherence
-6. Suggestions for improvement
-7. Overall recommendation
+  async getStatus() {
+    try {
+      const available = await this.isModelAvailable();
 
-Be thorough but constructive in your review.`;
+      return {
+        available: available && this.isAvailable,
+        initialized: this.isAvailable,
+        sessionActive: !!this.session,
+        capabilities: {
+          explain: true,
+          debug: true,
+          document: true,
+          refactor: true,
+          review: true
+        }
+      };
+    } catch (error) {
+      console.error('[ChromeAI] Failed to get status:', error);
+      return {
+        available: false,
+        initialized: false,
+        sessionActive: false,
+        capabilities: {}
+      };
+    }
   }
 
   // Cleanup method

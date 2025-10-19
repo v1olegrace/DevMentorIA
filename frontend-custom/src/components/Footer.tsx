@@ -1,4 +1,4 @@
-import { Settings, Heart } from "lucide-react";
+import { Settings } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -9,7 +9,6 @@ const Footer = () => {
           <span>Config</span>
         </button>
         <div className="flex items-center gap-1">
-          <Heart className="w-2.5 h-2.5 text-primary fill-primary" />
           <span>DevMentorAI</span>
         </div>
       </div>

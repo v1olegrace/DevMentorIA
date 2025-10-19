@@ -8,7 +8,7 @@
 import { AISessionManager } from './modules/ai-session-manager.js';
 import { ContextMenuManager } from './modules/context-menu.js';
 import { StorageManager } from './modules/storage.js';
-import { ChromeAI } from './modules/chrome-ai.js';
+import { DevMentorEducationalAI } from './modules/devmentor-educational-ai.js';
 
 // Global state (ephemeral - will be lost on termination)
 let isInitialized = false;
@@ -345,7 +345,7 @@ async function handleMessage(message, sender, sendResponse) {
 // --- MESSAGE HANDLERS ---
 async function handleGetAIStatus(request, sender, sendResponse) {
   try {
-    const chromeAI = new ChromeAI();
+    const educationalAI = new DevMentorEducationalAI();
     await chromeAI.initialize();
     const status = await chromeAI.getStatus();
 
@@ -413,7 +413,7 @@ async function handleTriggerAnalysis(request, sender, sendResponse) {
 
 async function handleExplainCode(request, sender, sendResponse) {
   try {
-    const chromeAI = new ChromeAI();
+    const educationalAI = new DevMentorEducationalAI();
     const result = await chromeAI.explainCode(request.code, request.context);
     
     await trackEvent('code_explained', { 
@@ -430,7 +430,7 @@ async function handleExplainCode(request, sender, sendResponse) {
 
 async function handleDebugCode(request, sender, sendResponse) {
   try {
-    const chromeAI = new ChromeAI();
+    const educationalAI = new DevMentorEducationalAI();
     const result = await chromeAI.debugCode(request.code, request.context);
     
     await trackEvent('code_debugged', { 
@@ -447,7 +447,7 @@ async function handleDebugCode(request, sender, sendResponse) {
 
 async function handleDocumentCode(request, sender, sendResponse) {
   try {
-    const chromeAI = new ChromeAI();
+    const educationalAI = new DevMentorEducationalAI();
     const result = await chromeAI.generateDocumentation(request.code, request.context);
     
     await trackEvent('documentation_generated', { 
@@ -464,7 +464,7 @@ async function handleDocumentCode(request, sender, sendResponse) {
 
 async function handleRefactorCode(request, sender, sendResponse) {
   try {
-    const chromeAI = new ChromeAI();
+    const educationalAI = new DevMentorEducationalAI();
     const result = await chromeAI.refactorCode(request.code, request.context);
     
     await trackEvent('code_refactored', { 
@@ -557,7 +557,7 @@ async function injectSidebar(tabId) {
 
 async function handleCodeAnalysis(type, data, tab) {
   try {
-    const chromeAI = new ChromeAI();
+    const educationalAI = new DevMentorEducationalAI();
     let result;
     
     switch (type) {

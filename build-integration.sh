@@ -141,3 +141,16 @@ echo "   3. Clique em 'Carregar sem compactação'"
 echo "   4. Selecione a pasta 'dist-frontend'"
 echo ""
 echo "✨ Sua extensão DevMentor AI está pronta!"
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -147,40 +147,14 @@ class ContentScriptManager {
   }
 
   setupLazyInjection() {
-    // Use Intersection Observer to inject UI only when needed
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          this.injectUIComponents(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, {
-      rootMargin: '50px',
-      threshold: 0.1
-    });
-
-    // Observe code blocks for potential injection points
-    const codeElements = document.querySelectorAll('pre, code, .highlight, .code-block');
-    codeElements.forEach(el => {
-      observer.observe(el);
-    });
-
-    this.observers.set('code-blocks', observer);
+    // Simplified for hackathon - no complex UI injection needed
+    // Code blocks are already visible and selectable
+    console.log('[ContentScript] UI injection skipped (using simple selection mode)');
   }
 
   async injectUIComponents(targetElement) {
-    try {
-      // Dynamic import for code splitting
-      const { UIInjector } = await import('./components/ui-injector.js');
-      const injector = new UIInjector();
-      await injector.inject(targetElement);
-      
-      this.uiComponents.set(targetElement, injector);
-      console.log('[ContentScript] ✅ UI components injected');
-    } catch (error) {
-      console.error('[ContentScript] UI injection failed:', error);
-    }
+    // Not needed for hackathon demo
+    // Users can select code directly on the page
   }
 
   async injectSidebar(request, sender, sendResponse) {
@@ -190,11 +164,9 @@ class ContentScriptManager {
         return;
       }
 
-      // Dynamic import for code splitting
-      const { SidebarInjector } = await import('./components/sidebar-injector.js');
-      this.sidebar = new SidebarInjector();
-      await this.sidebar.inject();
-      
+      // Simple sidebar injection without dynamic imports
+      this.createSimpleSidebar();
+
       this.isInjected = true;
       console.log('[ContentScript] ✅ Sidebar injected successfully');
       sendResponse({ success: true });
@@ -202,6 +174,37 @@ class ContentScriptManager {
       console.error('[ContentScript] Sidebar injection failed:', error);
       sendResponse({ success: false, error: error.message });
     }
+  }
+
+  createSimpleSidebar() {
+    // Create a simple sidebar for hackathon demo
+    const sidebar = document.createElement('div');
+    sidebar.id = 'devmentor-sidebar';
+    sidebar.className = 'devmentor-sidebar';
+    sidebar.innerHTML = `
+      <div class="sidebar-header">
+        <h3>DevMentor AI</h3>
+        <button class="close-sidebar">&times;</button>
+      </div>
+      <div class="sidebar-content">
+        <p>Select code and use keyboard shortcuts:</p>
+        <ul>
+          <li><kbd>Ctrl+Shift+E</kbd> - Explain</li>
+          <li><kbd>Ctrl+Shift+B</kbd> - Debug</li>
+          <li><kbd>Ctrl+Shift+G</kbd> - Document</li>
+          <li><kbd>Ctrl+Shift+R</kbd> - Refactor</li>
+        </ul>
+      </div>
+    `;
+
+    // Add close button handler
+    const closeBtn = sidebar.querySelector('.close-sidebar');
+    closeBtn.onclick = () => {
+      sidebar.remove();
+      this.isInjected = false;
+    };
+
+    document.body.appendChild(sidebar);
   }
 
   setupKeyboardHandlers() {
@@ -556,6 +559,17 @@ window.addEventListener('beforeunload', () => {
 });
 
 console.log('[ContentScript] ✅ Enterprise content script loaded');
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -96,3 +96,16 @@
 **Agora você tem a interface bonita e moderna que desenvolveu!** 🚀
 
 A extensão está usando 100% do seu frontend React com todas as funcionalidades avançadas implementadas!
+
+
+
+
+
+
+
+
+
+
+
+
+

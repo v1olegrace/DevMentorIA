@@ -105,3 +105,16 @@ O Chrome pode ter cache dos arquivos antigos. A remoção completa garante que e
 4. **TESTAR** todas as funcionalidades
 
 **Agora sim deve funcionar!** 🚀
+
+
+
+
+
+
+
+
+
+
+
+
+

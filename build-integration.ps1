@@ -123,3 +123,16 @@ Write-Host "   3. Clique em 'Carregar sem compactação'"
 Write-Host "   4. Selecione a pasta 'dist-frontend'"
 Write-Host ""
 Write-Host "✨ Sua extensão DevMentor AI está pronta!" -ForegroundColor Green
+
+
+
+
+
+
+
+
+
+
+
+
+

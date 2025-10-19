@@ -180,3 +180,16 @@ export default defineConfig({
 **🎉 Seu frontend React agora é a nova cara do DevMentor AI!**
 
 A integração está completa e pronta para uso. Você tem uma extensão Chrome moderna e profissional com todas as funcionalidades avançadas do seu frontend React integradas ao poderoso backend DevMentor AI.
+
+
+
+
+
+
+
+
+
+
+
+
+

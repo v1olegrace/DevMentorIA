@@ -95,3 +95,16 @@ O Chrome pode ter cache dos arquivos antigos. A remoção completa garante que e
 4. **VEJA** seu frontend React moderno funcionando!
 
 **Agora sim deve aparecer sua interface bonita!** 🚀
+
+
+
+
+
+
+
+
+
+
+
+
+

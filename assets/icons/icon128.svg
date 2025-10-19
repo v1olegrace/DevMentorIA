@@ -1,0 +1,36 @@
+<!-- DevMentor AI Icon - 128x128 -->
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a73e8;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1557b0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#gradient128)" filter="url(#shadow)"/>
+  
+  <!-- Main brain/checkmark icon -->
+  <path d="M64 16C37.49 16 16 37.49 16 64s21.49 48 48 48 48-21.49 48-48S90.51 16 64 16zm-8 64l-24-24 11.31-11.31L56 56.69l28.69-28.69L96 40l-40 40z" fill="white"/>
+  
+  <!-- Secondary elements -->
+  <circle cx="64" cy="64" r="8" fill="#34a853" opacity="0.9"/>
+  <circle cx="64" cy="64" r="4" fill="white" opacity="0.8"/>
+  
+  <!-- Decorative elements -->
+  <path d="M48 48h32v32h-32z" fill="white" opacity="0.1"/>
+  <path d="M56 56h16v16h-16z" fill="white" opacity="0.2"/>
+  
+  <!-- AI indicator -->
+  <text x="64" y="100" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold" opacity="0.8">AI</text>
+<<<<<<< HEAD
+</svg>
+=======
+</svg>
+
+
+
+
+>>>>>>> 515fa31 (Normalize line endings)

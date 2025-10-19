@@ -150,3 +150,16 @@
 - ✅ Histórico e estatísticas
 
 **Teste agora e aproveite sua extensão!** 🎉
+
+
+
+
+
+
+
+
+
+
+
+
+

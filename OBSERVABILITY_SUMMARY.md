@@ -242,3 +242,16 @@ Implementamos **o sistema de observabilidade mais avançado já visto em uma ext
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+

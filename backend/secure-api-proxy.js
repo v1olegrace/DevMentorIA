@@ -15,9 +15,39 @@ class SecureAPIProxy {
     this.app = express();
     this.apiKeys = new Map();
     this.requestLogs = new Map();
+    this.validateConfiguration();
     this.setupMiddleware();
     this.setupRoutes();
     this.setupSecurity();
+  }
+
+  validateConfiguration() {
+    // Fail fast if ALLOWED_ORIGINS is not configured
+    const allowedOrigins = process.env.ALLOWED_ORIGINS;
+    if (!allowedOrigins || allowedOrigins.trim() === '') {
+      console.error('❌ CRITICAL: ALLOWED_ORIGINS environment variable is not set or empty');
+      console.error('   This API requires explicit origin whitelist for security');
+      console.error('   Set ALLOWED_ORIGINS=origin1,origin2,origin3');
+      process.exit(1);
+    }
+
+    // Validate origins format
+    const origins = allowedOrigins.split(',').map(s => s.trim()).filter(Boolean);
+    if (origins.length === 0) {
+      console.error('❌ CRITICAL: No valid origins found in ALLOWED_ORIGINS');
+      process.exit(1);
+    }
+
+    // Check for wildcards (not allowed for credentials)
+    const hasWildcards = origins.some(origin => origin.includes('*'));
+    if (hasWildcards) {
+      console.warn('⚠️  WARNING: Wildcards detected in ALLOWED_ORIGINS');
+      console.warn('   Wildcards are not compatible with Access-Control-Allow-Credentials: true');
+      console.warn('   Consider using exact origins for better security');
+    }
+
+    console.log(`✅ CORS Configuration validated: ${origins.length} allowed origins`);
+    this.allowedOrigins = origins;
   }
 
   setupMiddleware() {
@@ -34,13 +64,49 @@ class SecureAPIProxy {
       }
     }));
 
-    // CORS configuration
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-    }));
+    // ✅ SECURITY: Strict CORS validation with explicit origin whitelist
+    this.app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      
+      // Block requests without Origin header (unless explicitly configured for server-to-server)
+      if (!origin) {
+        const allowServerToServer = process.env.ALLOW_SERVER_TO_SERVER === 'true';
+        if (!allowServerToServer) {
+          console.warn(`🚨 Request blocked: No Origin header from ${req.ip}`);
+          return res.status(403).json({ 
+            error: 'Origin header required',
+            code: 'MISSING_ORIGIN'
+          });
+        }
+        return next();
+      }
+      
+      // Strict origin validation - exact match only
+      if (this.allowedOrigins.includes(origin)) {
+        // Set CORS headers for whitelisted origins only
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        
+        // Handle preflight requests
+        if (req.method === 'OPTIONS') {
+          return res.status(204).end();
+        }
+        return next();
+      }
+      
+      // Log and block disallowed origins
+      console.warn(`🚨 CORS blocked origin: ${origin} from ${req.ip}`);
+      console.warn(`   Allowed origins: ${this.allowedOrigins.join(', ')}`);
+      
+      // Return 403 for disallowed origins (explicit rejection)
+      return res.status(403).json({ 
+        error: 'Origin not allowed',
+        code: 'CORS_BLOCKED',
+        allowedOrigins: this.allowedOrigins
+      });
+    });
 
     // Rate limiting
     const limiter = rateLimit({

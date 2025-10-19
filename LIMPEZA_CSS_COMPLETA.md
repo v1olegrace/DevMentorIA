@@ -128,3 +128,16 @@
 - ✅ **Interface moderna** e responsiva
 
 **Teste agora e aproveite sua extensão limpa e moderna!** 🚀
+
+
+
+
+
+
+
+
+
+
+
+
+

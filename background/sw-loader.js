@@ -362,10 +362,14 @@ class ServiceWorkerCore {
       // Programmatic injection - more controlled than declarative
       await chrome.scripting.executeScript({
         target: { tabId },
-        files: ['content/content-script.js']
+        files: ['content/components/sidebar-injector.js']
       });
       
-      // CSS injection removed - using React frontend with Tailwind CSS
+      await chrome.scripting.insertCSS({
+        target: { tabId },
+        files: ['assets/styles/sidebar.css']
+      });
+      
       console.log('[ServiceWorker] ✅ Sidebar injected successfully');
     } catch (error) {
       console.warn('[ServiceWorker] ⚠️ Sidebar injection failed:', error);

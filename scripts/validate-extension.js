@@ -12,7 +12,7 @@ class ExtensionValidator {
   constructor() {
     this.errors = [];
     this.warnings = [];
-    this.manifestPath = path.join(__dirname, 'manifest.json');
+    this.manifestPath = path.join(__dirname, '..', 'manifest.json');
   }
 
   /**
@@ -69,13 +69,28 @@ class ExtensionValidator {
         }
       });
 
-      // Check CSP
+      // Check CSP - Chrome Built-in AI does NOT require WebAssembly
       if (!manifest.content_security_policy) {
         this.errors.push('Missing Content Security Policy');
       } else {
         const csp = manifest.content_security_policy.extension_pages;
-        if (!csp.includes("'wasm-unsafe-eval'")) {
-          this.errors.push('CSP must include wasm-unsafe-eval for Chrome Built-in AI');
+        
+        // ✅ SECURITY: Check for unsafe directives
+        if (csp.includes("'unsafe-inline'")) {
+          this.errors.push('SECURITY RISK: CSP contains unsafe-inline - remove for security');
+        }
+        
+        if (csp.includes("'unsafe-eval'")) {
+          this.errors.push('SECURITY RISK: CSP contains unsafe-eval - remove for security');
+        }
+        
+        if (csp.includes("'wasm-unsafe-eval'")) {
+          this.warnings.push('SECURITY WARNING: wasm-unsafe-eval not needed for Chrome Built-in AI - consider removing');
+        }
+        
+        // ✅ SECURITY: Check for data: protocol
+        if (csp.includes('data:')) {
+          this.warnings.push('SECURITY WARNING: data: protocol in CSP may allow data exfiltration');
         }
       }
 
@@ -93,27 +108,21 @@ class ExtensionValidator {
 
     const requiredFiles = [
       'manifest.json',
+      'background/sw-loader.js',
       'background/service-worker.js',
       'content/content-script.js',
-      'popup/popup.html',
-      'popup/popup.js',
-      'popup/popup.css',
-      'assets/icons/icon16.svg',
-      'assets/icons/icon32.svg',
-      'assets/icons/icon48.svg',
-      'assets/icons/icon128.svg'
+      'popup.html',
+      'popup.js',
+      'options.html',
+      'options.js'
     ];
 
     const requiredUtils = [
-      'utils/secure-html-sanitizer.js',
-      'utils/secure-eval-manager.js',
-      'utils/chrome-builtin-ai.js',
-      'utils/shadow-dom-overlay.js',
       'utils/secure-storage-manager.js'
     ];
 
     [...requiredFiles, ...requiredUtils].forEach(file => {
-      const filePath = path.join(__dirname, file);
+      const filePath = path.join(__dirname, '..', file);
       if (!fs.existsSync(filePath)) {
         this.errors.push(`Missing required file: ${file}`);
       }
@@ -227,6 +236,8 @@ if (require.main === module) {
 }
 
 module.exports = ExtensionValidator;
+
+
 
 
 

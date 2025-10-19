@@ -334,7 +334,14 @@ class HTMLSanitizer {
       }
       
       const sanitized = this.sanitize(html, config);
-      element.innerHTML = sanitized;
+      
+      // Usar sanitizador seguro global se disponível
+      if (typeof __DEVMENTOR_SANITIZE !== 'undefined') {
+        return __DEVMENTOR_SANITIZE.safeInnerHTML(element, sanitized, config);
+      }
+      
+      // Fallback seguro: usar textContent em vez de innerHTML
+      element.textContent = sanitized;
       
       this.logger.debug('[HTMLSanitizer] Safe innerHTML set successfully');
       

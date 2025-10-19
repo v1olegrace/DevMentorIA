@@ -171,3 +171,16 @@ this.messageHandlers.set('inject-sidebar', this.handleInjectSidebar.bind(this));
 - ✅ **Interface moderna** como protagonista
 
 **Teste agora e aproveite sua extensão React completa!** 🎉
+
+
+
+
+
+
+
+
+
+
+
+
+

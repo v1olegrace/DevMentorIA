@@ -141,3 +141,16 @@ chrome.runtime.sendMessage({
 ---
 
 **🎉 Seu frontend React será a nova cara do DevMentor AI!**
+
+
+
+
+
+
+
+
+
+
+
+
+

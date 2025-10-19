@@ -1,8 +1,8 @@
-import catMascot from "@/assets/cat-mascot-orange.png";
 import { Languages, LogOut, User, Settings } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/hooks/useTranslation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ interface HeaderProps {
 
 const Header = ({ language, onLanguageChange, onOpenSettings }: HeaderProps) => {
   const { user, signOut } = useAuth();
+  const { availableLanguages } = useTranslation();
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -32,9 +33,12 @@ const Header = ({ language, onLanguageChange, onOpenSettings }: HeaderProps) => 
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
           <img 
-            src={catMascot} 
+            src="/mascot-small.png" 
             alt="DevMentorAI Logo" 
             className="w-6 h-6 object-contain"
+            onError={(e) => {
+              e.currentTarget.src = '/placeholder.svg';
+            }}
           />
           <h1 className="text-base font-semibold text-foreground">
             DevMentorAI
@@ -57,14 +61,11 @@ const Header = ({ language, onLanguageChange, onOpenSettings }: HeaderProps) => 
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pt">🇧🇷 PT</SelectItem>
-              <SelectItem value="en">🇺🇸 EN</SelectItem>
-              <SelectItem value="es">🇪🇸 ES</SelectItem>
-              <SelectItem value="fr">🇫🇷 FR</SelectItem>
-              <SelectItem value="de">🇩🇪 DE</SelectItem>
-              <SelectItem value="it">🇮🇹 IT</SelectItem>
-              <SelectItem value="ja">🇯🇵 JA</SelectItem>
-              <SelectItem value="zh">🇨🇳 ZH</SelectItem>
+              {availableLanguages.map((lang) => (
+                <SelectItem key={lang.code} value={lang.code}>
+                  {lang.nativeName}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

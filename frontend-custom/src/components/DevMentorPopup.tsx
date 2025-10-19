@@ -2,19 +2,21 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { FunctionType } from "@/components/FunctionBar";
 import { toast } from "sonner";
-import { 
-  Sparkles, 
-  Loader2, 
-  Code2, 
-  Bug, 
-  FileText, 
-  Zap, 
+import {
+  Sparkles,
+  Loader2,
+  Code2,
+  Bug,
+  FileText,
+  Zap,
   ClipboardCheck,
   Settings,
   History,
-  BarChart3
+  BarChart3,
+  Search
 } from "lucide-react";
 
 interface DevMentorPopupProps {}
@@ -22,6 +24,7 @@ interface DevMentorPopupProps {}
 const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
   const [selectedFunction, setSelectedFunction] = useState<FunctionType>("explain");
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [aiStatus, setAiStatus] = useState<{
     initialized: boolean;
     aiAvailable: boolean;
@@ -52,28 +55,64 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
   const handleAnalyze = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Verificar se há código selecionado na página
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const currentTab = tabs[0];
-      
+
       if (!currentTab.id) {
         toast.error("Não foi possível acessar a aba atual");
         return;
       }
 
-      // Enviar mensagem para content script
-      await chrome.tabs.sendMessage(currentTab.id, {
-        action: 'triggerAnalysis',
-        type: selectedFunction
+      // Obter código selecionado da página
+      const response = await chrome.tabs.sendMessage(currentTab.id, {
+        action: 'getSelectedCode'
       });
 
-      toast.success("Análise iniciada! Verifique a sidebar na página.");
-      
-      // Fechar popup após 1.5 segundos
-      setTimeout(() => {
-        window.close();
-      }, 1500);
+      if (!response?.code) {
+        toast.error("Por favor, selecione algum código na página primeiro");
+        return;
+      }
+
+      // Mapear tipo de função para ação do back-end
+      const actionMap: Record<FunctionType, string> = {
+        'explain': 'explain-code',
+        'bugs': 'debug-code',
+        'docs': 'generate-documentation',
+        'optimize': 'refactor-code',
+        'review': 'review-code'
+      };
+
+      const action = actionMap[selectedFunction];
+
+      // Enviar para o back-end (service worker)
+      const result = await chrome.runtime.sendMessage({
+        action: action,
+        code: response.code,
+        context: {
+          language: response.language || 'javascript',
+          query: searchQuery || undefined
+        }
+      });
+
+      if (result.success) {
+        // Enviar resultado para content script exibir
+        await chrome.tabs.sendMessage(currentTab.id, {
+          action: 'showResult',
+          type: selectedFunction,
+          data: result.data
+        });
+
+        toast.success("Análise concluída! Verifique o resultado na página.");
+
+        // Fechar popup após 1.5 segundos
+        setTimeout(() => {
+          window.close();
+        }, 1500);
+      } else {
+        toast.error(result.error || "Erro ao processar análise");
+      }
 
     } catch (error) {
       console.error('Erro na análise:', error);
@@ -81,7 +120,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedFunction]);
+  }, [selectedFunction, searchQuery]);
 
   const handleOpenOptions = () => {
     chrome.runtime.openOptionsPage();
@@ -120,25 +159,45 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
         </div>
       </div>
 
-      {/* Status */}
-      <Card className="p-3 mb-4">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
-            aiStatus.initialized && aiStatus.aiAvailable 
-              ? 'bg-green-500' 
-              : aiStatus.initialized 
-                ? 'bg-yellow-500' 
+      {/* Search Bar */}
+      <div className="mb-4 relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Faça sua pergunta..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 h-12 text-sm bg-background/50 backdrop-blur-sm border-primary/20 focus:border-primary"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !loading && aiStatus.aiAvailable) {
+              handleAnalyze();
+            }
+          }}
+        />
+      </div>
+
+      {/* Status Badge */}
+      <div className="mb-4 flex items-center justify-center">
+        <Badge
+          variant={aiStatus.initialized && aiStatus.aiAvailable ? "default" : "secondary"}
+          className="px-3 py-1"
+        >
+          <div className={`w-2 h-2 rounded-full mr-2 ${
+            aiStatus.initialized && aiStatus.aiAvailable
+              ? 'bg-green-500'
+              : aiStatus.initialized
+                ? 'bg-yellow-500'
                 : 'bg-red-500'
           }`} />
-          <span className="text-sm font-medium">
-            {aiStatus.initialized && aiStatus.aiAvailable 
-              ? 'IA Pronta' 
-              : aiStatus.initialized 
-                ? 'IA Indisponível' 
+          <span className="text-xs font-medium">
+            {aiStatus.initialized && aiStatus.aiAvailable
+              ? 'IA Pronta'
+              : aiStatus.initialized
+                ? 'IA Indisponível'
                 : 'Inicializando...'}
           </span>
-        </div>
-      </Card>
+        </Badge>
+      </div>
 
       {/* Function Selection */}
       <div className="mb-4">
@@ -232,3 +291,16 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
 };
 
 export default DevMentorPopup;
+
+
+
+
+
+
+
+
+
+
+
+
+

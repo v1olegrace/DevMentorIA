@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevMentor AI - Hybrid Architecture Test Suite</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 2em;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 1.1em;
+    }
+
+    .test-section {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .test-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin: 5px;
+    }
+
+    .test-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .test-button:active {
+      transform: translateY(0);
+    }
+
+    .test-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+    }
+
+    .error {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+    }
+
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+    }
+
+    .info {
+      background: #d1ecf1;
+      border-left: 4px solid #17a2b8;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .status-available {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-unavailable {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 10px 0;
+    }
+
+    .code-sample {
+      background: #282c34;
+      color: #abb2bf;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .metric {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .metric-label {
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      color: #333;
+      font-size: 1.5em;
+      font-weight: 600;
+    }
+
+    .tier-info {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin: 10px 5px;
+    }
+
+    .tier-free {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    .tier-pro {
+      background: #f3e5f5;
+      color: #6a1b9a;
+    }
+
+    .tier-enterprise {
+      background: #fff3e0;
+      color: #e65100;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 DevMentor AI - Hybrid Architecture Test Suite</h1>
+      <p class="subtitle">Chrome Built-in AI Hackathon Edition - Testing All 4 APIs + Premium Features</p>
+    </div>
+
+    <!-- System Status -->
+    <div class="test-section">
+      <h2>
+        📊 System Status
+        <span id="system-status-badge" class="status-badge status-pending">Checking...</span>
+      </h2>
+      <button class="test-button" onclick="checkSystemStatus()">Check System Status</button>
+      <button class="test-button" onclick="checkCapabilities()">Check Capabilities</button>
+      <div id="status-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Chrome Built-in AI Tests -->
+    <div class="test-section">
+      <h2>🤖 Chrome Built-in AI Tests (Core - FREE Tier)</h2>
+      <div class="test-grid">
+        <button class="test-button" onclick="testPromptAPI()">Test Prompt API</button>
+        <button class="test-button" onclick="testSummarizationAPI()">Test Summarization API</button>
+        <button class="test-button" onclick="testWriteAPI()">Test Write API</button>
+        <button class="test-button" onclick="testRewriteAPI()">Test Rewrite API</button>
+      </div>
+      <div id="chrome-ai-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Code Analysis Tests -->
+    <div class="test-section">
+      <h2>💻 Code Analysis Features</h2>
+      <div class="test-grid">
+        <button class="test-button" onclick="testExplainCode()">Explain Code</button>
+        <button class="test-button" onclick="testDebugCode()">Debug Code</button>
+        <button class="test-button" onclick="testDocumentCode()">Generate Docs</button>
+        <button class="test-button" onclick="testRefactorCode()">Refactor Code</button>
+        <button class="test-button" onclick="testReviewCode()">Review Code</button>
+      </div>
+      <div id="analysis-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Educational Features Test -->
+    <div class="test-section">
+      <h2>🎓 Educational Features (Enhanced FREE Tier)</h2>
+      <button class="test-button" onclick="testComplexExplanation()">Test Complex Code Teaching</button>
+      <button class="test-button" onclick="testConceptExtraction()">Test Concept Extraction</button>
+      <div id="education-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Premium Features Tests -->
+    <div class="test-section">
+      <h2>⭐ Premium Features Tests (PRO/ENTERPRISE)</h2>
+      <div class="tier-info tier-free">FREE: Chrome Built-in AI Only</div>
+      <div class="tier-info tier-pro">PRO: + Gemini Pro Enhancement</div>
+      <div class="tier-info tier-enterprise">ENTERPRISE: + All Features</div>
+      <div class="test-grid">
+        <button class="test-button" onclick="testVideoGeneration()">Generate Video</button>
+        <button class="test-button" onclick="testDiagramGeneration()">Generate Diagram</button>
+        <button class="test-button" onclick="testQuizGeneration()">Generate Quiz</button>
+      </div>
+      <div id="premium-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="test-section">
+      <h2>📈 Performance Metrics</h2>
+      <button class="test-button" onclick="runPerformanceTest()">Run Performance Test</button>
+      <div id="performance-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Tier Management -->
+    <div class="test-section">
+      <h2>🎯 Tier Management</h2>
+      <button class="test-button" onclick="upgradeToPro()">Upgrade to PRO</button>
+      <button class="test-button" onclick="upgradeToEnterprise()">Upgrade to ENTERPRISE</button>
+      <button class="test-button" onclick="resetToFree()">Reset to FREE</button>
+      <div id="tier-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Full Integration Test -->
+    <div class="test-section">
+      <h2>🧪 Full Integration Test</h2>
+      <button class="test-button" onclick="runFullTest()">Run Complete Test Suite</button>
+      <div id="integration-result" class="result" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Sample code for testing
+    const SAMPLE_CODE = {
+      simple: `function add(a, b) {
+  return a + b;
+}`,
+
+      complex: `class DataProcessor {
+  constructor(options = {}) {
+    this.cache = new Map();
+    this.maxSize = options.maxSize || 1000;
+    this.ttl = options.ttl || 60000;
+  }
+
+  async process(data) {
+    const key = this.generateKey(data);
+
+    if (this.cache.has(key)) {
+      const cached = this.cache.get(key);
+      if (Date.now() - cached.timestamp < this.ttl) {
+        return cached.value;
+      }
+      this.cache.delete(key);
+    }
+
+    const result = await this.transform(data);
+
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+
+    this.cache.set(key, {
+      value: result,
+      timestamp: Date.now()
+    });
+
+    return result;
+  }
+
+  generateKey(data) {
+    return JSON.stringify(data);
+  }
+
+  async transform(data) {
+    return data.map(item => ({
+      ...item,
+      processed: true,
+      timestamp: Date.now()
+    }));
+  }
+}`,
+
+      buggy: `function divide(a, b) {
+  return a / b;  // No zero check!
+}
+
+const result = divide(10, 0);
+console.log(result);  // Infinity - potential issue`
+    };
+
+    // Utility functions
+    function showResult(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.style.display = 'block';
+      element.className = `result ${type}`;
+      element.innerHTML = message;
+    }
+
+    function formatJSON(obj) {
+      return '<pre>' + JSON.stringify(obj, null, 2) + '</pre>';
+    }
+
+    async function sendMessage(action, data = {}) {
+      return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action, ...data }, (response) => {
+          if (chrome.runtime.lastError) {
+            resolve({ success: false, error: chrome.runtime.lastError.message });
+          } else {
+            resolve(response);
+          }
+        });
+      });
+    }
+
+    // Test functions
+    async function checkSystemStatus() {
+      showResult('status-result', '<div class="loading"></div> Checking system status...', 'info');
+
+      const response = await sendMessage('get-status');
+
+      if (response.success) {
+        const badge = document.getElementById('system-status-badge');
+        badge.textContent = response.data.initialized ? 'Online' : 'Offline';
+        badge.className = `status-badge ${response.data.initialized ? 'status-available' : 'status-unavailable'}`;
+
+        let html = '<h3>✅ System Status</h3>';
+        html += `<p><strong>Initialized:</strong> ${response.data.initialized}</p>`;
+        html += `<p><strong>Current Tier:</strong> ${response.data.tier}</p>`;
+        html += '<h4>Core (Chrome Built-in AI):</h4>';
+        html += formatJSON(response.data.core);
+        html += '<h4>Premium Features:</h4>';
+        html += formatJSON(response.data.premium);
+
+        showResult('status-result', html, 'success');
+      } else {
+        showResult('status-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function checkCapabilities() {
+      showResult('status-result', '<div class="loading"></div> Checking capabilities...', 'info');
+
+      const response = await sendMessage('get-capabilities');
+
+      if (response.success) {
+        let html = '<h3>🎯 Available Capabilities</h3>';
+        html += formatJSON(response.data);
+        showResult('status-result', html, 'success');
+      } else {
+        showResult('status-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testPromptAPI() {
+      showResult('chrome-ai-result', '<div class="loading"></div> Testing Prompt API (Gemini Nano)...', 'info');
+
+      const response = await sendMessage('explain-code', {
+        code: SAMPLE_CODE.simple,
+        context: { language: 'javascript', testAPI: 'prompt' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Prompt API Test - Code Explanation</h3>';
+        html += '<h4>Core Result (Chrome Built-in AI):</h4>';
+        html += `<p><strong>Provider:</strong> ${response.data.core.provider}</p>`;
+        html += `<p><strong>Processing Time:</strong> ${response.data.core.processingTime}ms</p>`;
+        html += `<div class="code-sample">${response.data.core.explanation}</div>`;
+        showResult('chrome-ai-result', html, 'success');
+      } else {
+        showResult('chrome-ai-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testSummarizationAPI() {
+      showResult('chrome-ai-result', '<div class="loading"></div> Testing Summarization API...', 'info');
+
+      const response = await sendMessage('explain-code', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript', summary: true }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Summarization API Test</h3>';
+        html += '<p>This test uses the Summarization API to provide a quick overview.</p>';
+        html += formatJSON(response.data);
+        showResult('chrome-ai-result', html, 'success');
+      } else {
+        showResult('chrome-ai-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testWriteAPI() {
+      showResult('chrome-ai-result', '<div class="loading"></div> Testing Write API...', 'info');
+
+      const response = await sendMessage('generate-documentation', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript', style: 'jsdoc' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Write API Test - Documentation Generation</h3>';
+        html += formatJSON(response.data);
+        showResult('chrome-ai-result', html, 'success');
+      } else {
+        showResult('chrome-ai-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testRewriteAPI() {
+      showResult('chrome-ai-result', '<div class="loading"></div> Testing Rewrite API...', 'info');
+
+      const response = await sendMessage('refactor-code', {
+        code: SAMPLE_CODE.simple,
+        context: { language: 'javascript', goals: ['readability', 'performance'] }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Rewrite API Test - Code Refactoring</h3>';
+        html += formatJSON(response.data);
+        showResult('chrome-ai-result', html, 'success');
+      } else {
+        showResult('chrome-ai-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testExplainCode() {
+      showResult('analysis-result', '<div class="loading"></div> Explaining code...', 'info');
+
+      const response = await sendMessage('explain-code', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Code Explanation</h3>';
+        html += `<p><strong>Tier:</strong> ${response.data.tier}</p>`;
+        html += '<h4>Core Explanation:</h4>';
+        html += `<div class="code-sample">${response.data.core.explanation}</div>`;
+
+        if (response.data.enhanced) {
+          html += '<h4>Enhanced Explanation (Premium):</h4>';
+          html += formatJSON(response.data.enhanced);
+        }
+
+        showResult('analysis-result', html, 'success');
+      } else {
+        showResult('analysis-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testDebugCode() {
+      showResult('analysis-result', '<div class="loading"></div> Debugging code...', 'info');
+
+      const response = await sendMessage('debug-code', {
+        code: SAMPLE_CODE.buggy,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Debug Analysis</h3>';
+        html += formatJSON(response.data);
+        showResult('analysis-result', html, 'success');
+      } else {
+        showResult('analysis-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testDocumentCode() {
+      showResult('analysis-result', '<div class="loading"></div> Generating documentation...', 'info');
+
+      const response = await sendMessage('generate-documentation', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript', style: 'jsdoc' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Documentation Generated</h3>';
+        html += formatJSON(response.data);
+        showResult('analysis-result', html, 'success');
+      } else {
+        showResult('analysis-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testRefactorCode() {
+      showResult('analysis-result', '<div class="loading"></div> Refactoring code...', 'info');
+
+      const response = await sendMessage('refactor-code', {
+        code: SAMPLE_CODE.simple,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Refactoring Suggestions</h3>';
+        html += formatJSON(response.data);
+        showResult('analysis-result', html, 'success');
+      } else {
+        showResult('analysis-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testReviewCode() {
+      showResult('analysis-result', '<div class="loading"></div> Reviewing code...', 'info');
+
+      const response = await sendMessage('review-code', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>✅ Code Review</h3>';
+        html += formatJSON(response.data);
+        showResult('analysis-result', html, 'success');
+      } else {
+        showResult('analysis-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testComplexExplanation() {
+      showResult('education-result', '<div class="loading"></div> Testing complex code teaching...', 'info');
+
+      const response = await sendMessage('explain-code', {
+        code: SAMPLE_CODE.complex,
+        context: {
+          language: 'javascript',
+          educationalMode: true,
+          complexity: 'advanced'
+        }
+      });
+
+      if (response.success) {
+        let html = '<h3>🎓 Complex Code Teaching Test</h3>';
+        html += '<p>This demonstrates the enhanced FREE tier\'s ability to teach complex concepts.</p>';
+        html += `<div class="code-sample">${response.data.core.explanation}</div>`;
+        showResult('education-result', html, 'success');
+      } else {
+        showResult('education-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testConceptExtraction() {
+      showResult('education-result', '<div class="loading"></div> Testing concept extraction...', 'info');
+
+      const response = await sendMessage('explain-code', {
+        code: SAMPLE_CODE.complex,
+        context: {
+          language: 'javascript',
+          extractConcepts: true
+        }
+      });
+
+      if (response.success) {
+        let html = '<h3>💡 Concept Extraction Test</h3>';
+        html += formatJSON(response.data);
+        showResult('education-result', html, 'success');
+      } else {
+        showResult('education-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function testVideoGeneration() {
+      showResult('premium-result', '<div class="loading"></div> Testing video generation...', 'info');
+
+      const response = await sendMessage('generate-video', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>🎥 Video Generation Test</h3>';
+        html += formatJSON(response.data);
+        showResult('premium-result', html, 'success');
+      } else {
+        showResult('premium-result', `<h3>⚠️ Premium Feature</h3><p>${response.error || 'Requires PRO tier or higher'}</p>`, 'warning');
+      }
+    }
+
+    async function testDiagramGeneration() {
+      showResult('premium-result', '<div class="loading"></div> Testing diagram generation...', 'info');
+
+      const response = await sendMessage('generate-diagram', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>📊 Diagram Generation Test</h3>';
+        html += formatJSON(response.data);
+        showResult('premium-result', html, 'success');
+      } else {
+        showResult('premium-result', `<h3>⚠️ Premium Feature</h3><p>${response.error || 'Requires PRO tier or higher'}</p>`, 'warning');
+      }
+    }
+
+    async function testQuizGeneration() {
+      showResult('premium-result', '<div class="loading"></div> Testing quiz generation...', 'info');
+
+      const response = await sendMessage('generate-quiz', {
+        code: SAMPLE_CODE.complex,
+        context: { language: 'javascript' }
+      });
+
+      if (response.success) {
+        let html = '<h3>📝 Quiz Generation Test</h3>';
+        html += formatJSON(response.data);
+        showResult('premium-result', html, 'success');
+      } else {
+        showResult('premium-result', `<h3>⚠️ Premium Feature</h3><p>${response.error || 'Requires PRO tier or higher'}</p>`, 'warning');
+      }
+    }
+
+    async function runPerformanceTest() {
+      showResult('performance-result', '<div class="loading"></div> Running performance test...', 'info');
+
+      const startTime = Date.now();
+      const iterations = 5;
+      const results = [];
+
+      for (let i = 0; i < iterations; i++) {
+        const iterStart = Date.now();
+        const response = await sendMessage('explain-code', {
+          code: SAMPLE_CODE.simple,
+          context: { language: 'javascript' }
+        });
+        const iterTime = Date.now() - iterStart;
+        results.push(iterTime);
+      }
+
+      const totalTime = Date.now() - startTime;
+      const avgTime = results.reduce((a, b) => a + b, 0) / results.length;
+
+      let html = '<h3>⚡ Performance Test Results</h3>';
+      html += `<div class="test-grid">`;
+      html += `<div class="metric"><div class="metric-label">Total Time</div><div class="metric-value">${totalTime}ms</div></div>`;
+      html += `<div class="metric"><div class="metric-label">Average Time</div><div class="metric-value">${avgTime.toFixed(0)}ms</div></div>`;
+      html += `<div class="metric"><div class="metric-label">Iterations</div><div class="metric-value">${iterations}</div></div>`;
+      html += `<div class="metric"><div class="metric-label">Throughput</div><div class="metric-value">${(1000 / avgTime).toFixed(2)} req/s</div></div>`;
+      html += `</div>`;
+      html += '<h4>Individual Results:</h4>';
+      html += '<pre>' + results.map((t, i) => `Iteration ${i + 1}: ${t}ms`).join('\n') + '</pre>';
+
+      showResult('performance-result', html, 'success');
+    }
+
+    async function upgradeToPro() {
+      showResult('tier-result', '<div class="loading"></div> Upgrading to PRO tier...', 'info');
+
+      const response = await sendMessage('upgrade-tier', { tier: 'PRO' });
+
+      if (response.success) {
+        let html = '<h3>✅ Upgraded to PRO Tier</h3>';
+        html += '<p>You now have access to premium features including Gemini Pro enhancements!</p>';
+        html += formatJSON(response.data);
+        showResult('tier-result', html, 'success');
+      } else {
+        showResult('tier-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function upgradeToEnterprise() {
+      showResult('tier-result', '<div class="loading"></div> Upgrading to ENTERPRISE tier...', 'info');
+
+      const response = await sendMessage('upgrade-tier', { tier: 'ENTERPRISE' });
+
+      if (response.success) {
+        let html = '<h3>✅ Upgraded to ENTERPRISE Tier</h3>';
+        html += '<p>You now have access to all premium features including team collaboration!</p>';
+        html += formatJSON(response.data);
+        showResult('tier-result', html, 'success');
+      } else {
+        showResult('tier-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function resetToFree() {
+      showResult('tier-result', '<div class="loading"></div> Resetting to FREE tier...', 'info');
+
+      const response = await sendMessage('upgrade-tier', { tier: 'FREE' });
+
+      if (response.success) {
+        let html = '<h3>✅ Reset to FREE Tier</h3>';
+        html += '<p>Back to Chrome Built-in AI core features with enhanced educational capabilities.</p>';
+        html += formatJSON(response.data);
+        showResult('tier-result', html, 'success');
+      } else {
+        showResult('tier-result', `<h3>❌ Error</h3><p>${response.error}</p>`, 'error');
+      }
+    }
+
+    async function runFullTest() {
+      const resultDiv = document.getElementById('integration-result');
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result info';
+
+      let html = '<h3>🧪 Running Complete Test Suite</h3><p>Testing all features...</p>';
+      resultDiv.innerHTML = html;
+
+      const tests = [
+        { name: 'System Status', fn: () => sendMessage('get-status') },
+        { name: 'Capabilities Check', fn: () => sendMessage('get-capabilities') },
+        { name: 'Explain Code (Prompt API)', fn: () => sendMessage('explain-code', { code: SAMPLE_CODE.simple, context: {} }) },
+        { name: 'Debug Code', fn: () => sendMessage('debug-code', { code: SAMPLE_CODE.buggy, context: {} }) },
+        { name: 'Generate Docs (Write API)', fn: () => sendMessage('generate-documentation', { code: SAMPLE_CODE.simple, context: {} }) },
+        { name: 'Refactor Code (Rewrite API)', fn: () => sendMessage('refactor-code', { code: SAMPLE_CODE.simple, context: {} }) }
+      ];
+
+      const results = [];
+
+      for (const test of tests) {
+        try {
+          const startTime = Date.now();
+          const result = await test.fn();
+          const time = Date.now() - startTime;
+
+          results.push({
+            name: test.name,
+            success: result.success,
+            time: time,
+            error: result.error || null
+          });
+
+          html += `<p>✅ ${test.name} - ${time}ms</p>`;
+        } catch (error) {
+          results.push({
+            name: test.name,
+            success: false,
+            error: error.message
+          });
+          html += `<p>❌ ${test.name} - Failed: ${error.message}</p>`;
+        }
+
+        resultDiv.innerHTML = html;
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const totalTime = results.reduce((sum, r) => sum + (r.time || 0), 0);
+
+      html += '<hr>';
+      html += `<h4>Summary</h4>`;
+      html += `<p><strong>Passed:</strong> ${successCount}/${tests.length}</p>`;
+      html += `<p><strong>Total Time:</strong> ${totalTime}ms</p>`;
+      html += '<h4>Detailed Results:</h4>';
+      html += '<pre>' + JSON.stringify(results, null, 2) + '</pre>';
+
+      resultDiv.className = `result ${successCount === tests.length ? 'success' : 'warning'}`;
+      resultDiv.innerHTML = html;
+    }
+
+    // Auto-check status on load
+    window.addEventListener('load', () => {
+      setTimeout(checkSystemStatus, 500);
+    });
+  </script>
+</body>
+</html>

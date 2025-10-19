@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjects, Project } from "@/hooks/useProjects";
 import { useDevMentorAnalysis } from "@/hooks/useDevMentorAnalysis";
+import { useTranslation } from "@/hooks/useTranslation";
 import { FunctionType } from "@/components/FunctionBar";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -13,6 +14,7 @@ import AnalysisHistory from "@/components/AnalysisHistory";
 import SettingsPanel from "@/components/SettingsPanel";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, History } from "lucide-react";
+import { LoveableMascot } from "@/components/LoveableMascot";
 
 interface Analysis {
   id: number;
@@ -25,10 +27,10 @@ interface Analysis {
 
 const MainApp = () => {
   const { user } = useAuth();
+  const { t, language, changeLanguage } = useTranslation();
   const [code, setCode] = useState("");
   const [selectedFunction, setSelectedFunction] = useState<FunctionType>("explain");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [language, setLanguage] = useState("pt");
   const [activeView, setActiveView] = useState<"analyzer" | "history">("analyzer");
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -45,22 +47,22 @@ const MainApp = () => {
 
   const handleAnalyze = useCallback(async () => {
     if (!code.trim()) {
-      toast.error("Por favor, insira algum código para análise");
+      toast.error(t('pleaseEnterCode'));
       return;
     }
 
     await analyzeCode(code, selectedFunction, { projectId: selectedProject?.id });
-  }, [code, selectedFunction, selectedProject, analyzeCode]);
+  }, [code, selectedFunction, selectedProject, analyzeCode, t]);
 
   const handleLoadAnalysis = (analysis: Analysis) => {
     setCode(analysis.code);
     setSelectedFunction(analysis.type);
     setActiveView("analyzer");
-    toast.success("Análise carregada!");
+    toast.success(t('analysisLoaded'));
   };
 
   const handleSaveAnalysis = () => {
-    toast.success("Análise salva com sucesso!");
+    toast.success(t('analysisSaved'));
   };
 
   useEffect(() => {
@@ -83,7 +85,7 @@ const MainApp = () => {
 
   useEffect(() => {
     if (result) {
-      toast.success("Análise concluída!");
+      toast.success(t('analysisCompleted'));
       
       // Salvar no histórico
       const newAnalysis: Analysis = {
@@ -101,13 +103,13 @@ const MainApp = () => {
         return updatedAnalyses;
       });
     }
-  }, [result, code, selectedFunction, selectedProject]);
+  }, [result, code, selectedFunction, selectedProject, t]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <Header 
         language={language} 
-        onLanguageChange={setLanguage}
+        onLanguageChange={changeLanguage}
         onOpenSettings={() => setShowSettings(true)}
       />
       
@@ -134,7 +136,7 @@ const MainApp = () => {
                 onClick={() => setActiveView("analyzer")}
                 className="flex-1"
               >
-                🔍 Analisador
+                🔍 {t('analyzer')}
               </Button>
               <Button
                 variant={activeView === "history" ? "default" : "outline"}
@@ -143,7 +145,7 @@ const MainApp = () => {
                 className="flex-1"
               >
                 <History className="w-4 h-4 mr-1" />
-                Histórico
+                {t('history')}
               </Button>
             </div>
           </aside>
@@ -152,16 +154,22 @@ const MainApp = () => {
           <div className="space-y-6">
             {activeView === "analyzer" ? (
               <>
+
             {/* Header Section */}
             <div className="space-y-3 animate-fade-in">
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Como posso ajudar você hoje?
-              </h1>
-              <p className="text-base text-muted-foreground">
-                {selectedProject
-                  ? `📁 Projeto: ${selectedProject.name}`
-                  : "Cole seu código ou faça uma pergunta"}
-              </p>
+              <div className="flex items-center gap-3">
+                <LoveableMascot size="lg" />
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    {t('title')}
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    {selectedProject
+                      ? `📁 ${t('projectLabel')}: ${selectedProject.name}`
+                      : t('subtitle')}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Function Tabs */}
@@ -187,7 +195,7 @@ const MainApp = () => {
                 <textarea
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="Ex: Como otimizar este código? O que este código faz?"
+                  placeholder={t('codePlaceholder')}
                   className="w-full min-h-[100px] p-3 rounded-lg border-2 border-border bg-background text-foreground resize-none focus:border-primary focus:outline-none transition-colors"
                 />
               </div>
@@ -218,18 +226,18 @@ const MainApp = () => {
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Analisando código...
+                    {t('analyzing')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Gerar Análise
+                    {t('analyze')}
                   </>
                 )}
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
-                ⌨️ Pressione <kbd className="px-2 py-1 bg-muted rounded font-mono">Ctrl + Enter</kbd> para analisar rapidamente
+                ⌨️ {t('shortcutHint')}
               </p>
             </div>
 
@@ -249,7 +257,7 @@ const MainApp = () => {
               <div className="flex flex-col items-center justify-center py-12 space-y-4 animate-pulse">
                 <Loader2 className="w-12 h-12 text-primary animate-spin" />
                 <p className="text-base font-medium text-muted-foreground">
-                  Analisando seu código...
+                  {t('analyzing')}
                 </p>
               </div>
             )}
