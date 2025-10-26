@@ -1,0 +1,136 @@
+# DevMentor AI - NPM Ignore
+# Files to exclude from npm package
+
+# Source files (keep only built files)
+src/
+source/
+lib/
+utils/
+background/
+content/
+popup/
+options/
+
+# Development files
+tests/
+test/
+spec/
+*.test.js
+*.spec.js
+test-runner.html
+
+# Configuration files
+.eslintrc.json
+.eslintrc.js
+.prettierrc
+.prettierrc.js
+jest.config.js
+webpack.config.js
+rollup.config.js
+
+# Documentation (keep only essential)
+docs/
+*.md
+!README.md
+!LICENSE
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build artifacts
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.tmp/
+
+# Private files
+.env
+.env.*
+*.key
+*.pem
+secrets/
+private/
+credentials/
+
+# Chrome extension specific
+*.crx
+*.pem
+web-accessible-resources/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Cache files
+.cache/
+.parcel-cache/
+.eslintcache
+.prettiercache
+*.tsbuildinfo
+
+# Optional files
+.npm
+.node_repl_history
+.yarn-integrity
+.yarn/
+.pnp.*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

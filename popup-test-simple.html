@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevMentor AI - Teste</title>
+    <style>
+        body {
+            width: 400px;
+            height: 600px;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Nunito Sans', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .status {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚀 DevMentor AI</div>
+        <div class="status">
+            <h3>✅ Interface React Moderna</h3>
+            <p>Se você está vendo esta página, a extensão está funcionando corretamente!</p>
+        </div>
+        
+        <button class="button" onclick="testFunction()">Testar Função</button>
+        <button class="button" onclick="showInfo()">Mostrar Info</button>
+        
+        <div id="result" style="margin-top: 20px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; display: none;">
+        </div>
+    </div>
+
+    <script>
+        function testFunction() {
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result').innerHTML = `
+                <h4>✅ Teste Funcionando!</h4>
+                <p>Timestamp: ${new Date().toLocaleString()}</p>
+                <p>Chrome Version: ${navigator.userAgent}</p>
+            `;
+        }
+
+        function showInfo() {
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result').innerHTML = `
+                <h4>📊 Informações da Extensão</h4>
+                <p><strong>Status:</strong> ✅ Funcionando</p>
+                <p><strong>Interface:</strong> React Moderna</p>
+                <p><strong>Build:</strong> Vite + TypeScript</p>
+                <p><strong>UI:</strong> shadcn-ui + Tailwind</p>
+            `;
+        }
+
+        // Log para debug
+        console.log('🚀 DevMentor AI - Teste carregado com sucesso!');
+        console.log('📅 Timestamp:', new Date().toISOString());
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

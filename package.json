@@ -1,0 +1,86 @@
+{
+  "name": "devmentor-ai",
+  "version": "1.0.0",
+  "description": "AI-powered code explanation and debugging assistant - Chrome Extension",
+  "main": "manifest.json",
+  "scripts": {
+    "build": "echo 'No build step required for Chrome extension'",
+    "test": "node tests/unit-tests.js",
+    "lint": "eslint . --ext .js,.json",
+    "lint:fix": "eslint . --ext .js,.json --fix",
+    "package": "zip -r devmentor-ai.zip . -x '*.git*' 'node_modules/*' 'tests/*' '*.test.js' '*.spec.js'",
+    "validate": "node scripts/validate-extension.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "code-analysis",
+    "debugging",
+    "programming-assistant",
+    "gemini-nano",
+    "chrome-builtin-ai"
+  ],
+  "author": "DevMentor AI Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/v1olegrace/DevMentorIA.git"
+  },
+  "bugs": {
+    "url": "https://github.com/v1olegrace/DevMentorIA/issues"
+  },
+  "homepage": "https://github.com/v1olegrace/DevMentorIA#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-security": "^1.7.0"
+  },
+  "files": [
+    "manifest.json",
+    "background/",
+    "content/",
+    "popup/",
+    "options/",
+    "assets/",
+    "utils/",
+    "README.md",
+    "LICENSE"
+  ],
+  "chromeExtension": {
+    "manifestVersion": 3,
+    "permissions": [
+      "activeTab",
+      "contextMenus",
+      "storage",
+      "scripting"
+    ],
+    "hostPermissions": [
+      "https://github.com/*",
+      "https://stackoverflow.com/*",
+      "https://developer.mozilla.org/*"
+    ],
+    "requirements": {
+      "chrome": ">=138.0.0",
+      "hardware": "Chrome Built-in AI compatible device"
+    }
+  },
+  "security": {
+    "csp": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+    "features": [
+      "OWASP-compliant HTML sanitization",
+      "Secure expression evaluation without eval()",
+      "Encrypted local storage",
+      "Shadow DOM isolation",
+      "Chrome Built-in AI integration"
+    ]
+  },
+  "privacy": {
+    "dataCollection": "none",
+    "externalAPIs": "none",
+    "localProcessing": true,
+    "offlineCapable": true
+  }
+}

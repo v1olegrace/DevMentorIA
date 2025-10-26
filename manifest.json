@@ -1,0 +1,141 @@
+{
+  "manifest_version": 3,
+  "name": "DevMentor AI - Chrome Built-in AI Challenge 2025",
+  "version": "2.0.0",
+  "description": "AI-powered coding assistant using 100% Chrome Built-in AI APIs (Prompt, Proofreader, Summarizer, Translator, Writer, Rewriter)",
+  
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "scripting",
+    "alarms"
+  ],
+  
+  "host_permissions": [
+    "https://github.com/*",
+    "https://stackoverflow.com/*",
+    "https://developer.mozilla.org/*",
+    "https://gitlab.com/*",
+    "https://bitbucket.org/*",
+    "https://codepen.io/*",
+    "https://jsfiddle.net/*",
+    "https://codesandbox.io/*"
+  ],
+  
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:;"
+  },
+
+  "minimum_chrome_version": "88",
+  
+  "commands": {
+    "explain-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Explain selected code with AI"
+    },
+    "debug-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
+      },
+      "description": "Debug selected code"
+    },
+    "document-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G",
+        "mac": "Command+Shift+G"
+      },
+      "description": "Generate documentation"
+    },
+    "refactor-code": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+R",
+        "mac": "Command+Shift+R"
+      },
+      "description": "Refactor selected code"
+    }
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*",
+        "https://stackoverflow.com/*",
+        "https://developer.mozilla.org/*",
+        "https://gitlab.com/*",
+        "https://bitbucket.org/*",
+        "https://codepen.io/*",
+        "https://jsfiddle.net/*",
+        "https://codesandbox.io/*"
+      ],
+      "js": [
+        "content/content-script.js",
+        "content/main.js",
+        "content/inject-page-bridge.js",
+        "content/ui-manager.js",
+        "content/premium-ui-manager.js",
+        "content/code-analyzer.js",
+        "content/screenshot-handler.js",
+        "utils/security-fixes.js"
+      ],
+      "css": [
+        "style.css",
+        "assets/styles/premium-features.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/*",
+        "utils/*",
+        "assets/*",
+        "examples/*",
+        "popup.html",
+        "options.html",
+        "style.css"
+      ],
+      "matches": [
+        "https://github.com/*",
+        "https://stackoverflow.com/*",
+        "https://developer.mozilla.org/*",
+        "https://gitlab.com/*",
+        "https://bitbucket.org/*",
+        "https://codepen.io/*",
+        "https://jsfiddle.net/*",
+        "https://codesandbox.io/*"
+      ]
+    }
+  ],
+  
+  "icons": {
+    "16": "assets/icons/icon16.svg",
+    "32": "assets/icons/icon32.svg",
+    "48": "assets/icons/icon48.svg",
+    "128": "assets/icons/icon128.svg"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DevMentor AI",
+    "default_icon": {
+      "16": "assets/icons/icon16.svg",
+      "32": "assets/icons/icon32.svg",
+      "48": "assets/icons/icon48.svg",
+      "128": "assets/icons/icon128.svg"
+    }
+  },
+
+  "options_page": "options.html"
+}
