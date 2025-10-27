@@ -22,7 +22,7 @@ export const useCodeAnalysis = () => {
     options: AnalysisOptions = {}
   ) => {
     if (!code.trim()) {
-      setError('Por favor, insira algum código para análise');
+      setError('Por favor, insira algum codigo para analise');
       return;
     }
 
@@ -36,26 +36,26 @@ export const useCodeAnalysis = () => {
 
       const analyses: Record<FunctionType, { analysis: string; type: FunctionType }> = {
         explain: {
-          analysis: `## 🔍 Explicação do Código
+          analysis: `##  Explicacao do Codigo
 
-Este código implementa uma funcionalidade importante. Vamos analisar cada parte:
+Este codigo implementa uma funcionalidade importante. Vamos analisar cada parte:
 
 ### Estrutura Principal
-- **Início**: Configuração inicial e declaração de variáveis
-- **Meio**: Lógica principal de processamento
+- **Inicio**: Configuracao inicial e declaracao de variaveis
+- **Meio**: Logica principal de processamento
 - **Fim**: Tratamento de resultados e retorno
 
 ### Funcionamento
-O código executa as seguintes etapas:
-1. Inicializa as variáveis necessárias
+O codigo executa as seguintes etapas:
+1. Inicializa as variaveis necessarias
 2. Processa os dados de entrada
-3. Aplica as transformações necessárias
+3. Aplica as transformacoes necessarias
 4. Retorna o resultado processado
 
 ### Pontos Importantes
-- A função utiliza técnicas modernas de JavaScript/TypeScript
+- A funcao utiliza tecnicas modernas de JavaScript/TypeScript
 - Implementa tratamento de erros adequado
-- Segue boas práticas de programação
+- Segue boas praticas de programacao
 
 ### Exemplo de Uso
 \`\`\`javascript
@@ -66,23 +66,23 @@ console.log(resultado);
         },
         
         bugs: {
-          analysis: `## 🐛 Análise de Bugs e Problemas
+          analysis: `##  Analise de Bugs e Problemas
 
 ### Problemas Identificados
 
-1. **Possível Memory Leak**
-   - **Problema**: Variável não está sendo liberada da memória
-   - **Solução**: Adicionar \`delete variableName\` após uso
+1. **Possivel Memory Leak**
+   - **Problema**: Variavel nao esta sendo liberada da memoria
+   - **Solucao**: Adicionar \`delete variableName\` apos uso
 
 2. **Tratamento de Erro Inadequado**
-   - **Problema**: Try-catch muito genérico
-   - **Solução**: Especificar tipos de erro específicos
+   - **Problema**: Try-catch muito generico
+   - **Solucao**: Especificar tipos de erro especificos
 
-3. **Validação de Entrada Ausente**
-   - **Problema**: Não valida se os parâmetros são válidos
-   - **Solução**: Adicionar validação no início da função
+3. **Validacao de Entrada Ausente**
+   - **Problema**: Nao valida se os parametros sao validos
+   - **Solucao**: Adicionar validacao no inicio da funcao
 
-### 🔧 Correções Sugeridas
+###  Correcoes Sugeridas
 
 \`\`\`javascript
 // ANTES
@@ -93,9 +93,9 @@ function minhaFuncao(param) {
 
 // DEPOIS
 function minhaFuncao(param) {
-  // Validação de entrada
+  // Validacao de entrada
   if (!param || typeof param !== 'string') {
-    throw new Error('Parâmetro inválido');
+    throw new Error('Parametro invalido');
   }
   
   try {
@@ -111,59 +111,59 @@ function minhaFuncao(param) {
 }
 \`\`\`
 
-### ⚠️ Pontos de Atenção
-- Verificar se todas as dependências estão disponíveis
+###  Pontos de Atencao
+- Verificar se todas as dependencias estao disponiveis
 - Testar com diferentes tipos de entrada
 - Implementar logs para debugging`,
           type: 'bugs'
         },
         
         docs: {
-          analysis: `## 📝 Documentação Gerada
+          analysis: `##  Documentacao Gerada
 
-### Descrição da Função
-Esta função processa dados de entrada e retorna um resultado transformado.
+### Descricao da Funcao
+Esta funcao processa dados de entrada e retorna um resultado transformado.
 
-### 🔧 Parâmetros
+###  Parametros
 - **\`param\`** (string): Dados de entrada para processamento
-- **\`options\`** (object, opcional): Configurações adicionais
+- **\`options\`** (object, opcional): Configuracoes adicionais
 
-### 📤 Retorno
+###  Retorno
 - **Tipo**: \`Promise<Object>\`
-- **Descrição**: Objeto contendo os dados processados
+- **Descricao**: Objeto contendo os dados processados
 
-### 💡 Exemplo de Uso
+###  Exemplo de Uso
 \`\`\`javascript
-// Uso básico
+// Uso basico
 const resultado = await minhaFuncao('dados');
 
-// Com opções
+// Com opcoes
 const resultado = await minhaFuncao('dados', {
   timeout: 5000,
   retries: 3
 });
 \`\`\`
 
-### 🚨 Exceções
-- **\`ValidationError\`**: Quando os parâmetros são inválidos
+###  Excecoes
+- **\`ValidationError\`**: Quando os parametros sao invalidos
 - **\`ProcessingError\`**: Quando ocorre erro no processamento
-- **\`TimeoutError\`**: Quando o timeout é excedido
+- **\`TimeoutError\`**: Quando o timeout e excedido
 
-### 📊 Complexidade
-- **Tempo**: O(n) onde n é o tamanho dos dados
-- **Espaço**: O(1) - uso constante de memória
+###  Complexidade
+- **Tempo**: O(n) onde n e o tamanho dos dados
+- **Espaco**: O(1) - uso constante de memoria
 
-### 🔗 Dependências
-- \`processData()\`: Função auxiliar para processamento
-- \`validateInput()\`: Função para validação de entrada
-- \`cleanup()\`: Função para limpeza de recursos`,
+###  Dependencias
+- \`processData()\`: Funcao auxiliar para processamento
+- \`validateInput()\`: Funcao para validacao de entrada
+- \`cleanup()\`: Funcao para limpeza de recursos`,
           type: 'docs'
         },
         
         optimize: {
-          analysis: `## ⚡ Otimização de Código
+          analysis: `##  Otimizacao de Codigo
 
-### 🚀 Melhorias de Performance
+###  Melhorias de Performance
 
 #### 1. **Cache de Resultados**
 \`\`\`javascript
@@ -217,58 +217,58 @@ function debounce(func, wait) {
 }
 \`\`\`
 
-### 📈 Métricas de Melhoria
-- **Performance**: +40% mais rápido
-- **Memória**: -25% uso de RAM
-- **Tempo de resposta**: -60% latência
+###  Metricas de Melhoria
+- **Performance**: +40% mais rapido
+- **Memoria**: -25% uso de RAM
+- **Tempo de resposta**: -60% latencia
 
-### 🎯 Próximos Passos
+###  Proximos Passos
 1. Implementar cache inteligente
-2. Adicionar compressão de dados
+2. Adicionar compressao de dados
 3. Otimizar queries de banco de dados`,
           type: 'optimize'
         },
         
         review: {
-          analysis: `## 👀 Code Review Completo
+          analysis: `##  Code Review Completo
 
-### ✅ Pontos Positivos
-- **Estrutura clara**: Código bem organizado e legível
-- **Nomenclatura**: Variáveis e funções com nomes descritivos
-- **Modularidade**: Funções com responsabilidades bem definidas
-- **Tratamento de erros**: Implementação adequada de try-catch
+###  Pontos Positivos
+- **Estrutura clara**: Codigo bem organizado e legivel
+- **Nomenclatura**: Variaveis e funcoes com nomes descritivos
+- **Modularidade**: Funcoes com responsabilidades bem definidas
+- **Tratamento de erros**: Implementacao adequada de try-catch
 
-### ⚠️ Pontos de Melhoria
+###  Pontos de Melhoria
 
-#### 1. **Segurança**
-- Implementar validação de entrada mais rigorosa
-- Adicionar sanitização de dados
-- Verificar permissões de acesso
+#### 1. **Seguranca**
+- Implementar validacao de entrada mais rigorosa
+- Adicionar sanitizacao de dados
+- Verificar permissoes de acesso
 
 #### 2. **Performance**
 - Otimizar loops aninhados
-- Implementar cache para operações custosas
-- Reduzir chamadas desnecessárias à API
+- Implementar cache para operacoes custosas
+- Reduzir chamadas desnecessarias a API
 
 #### 3. **Manutenibilidade**
-- Adicionar mais comentários explicativos
-- Criar testes unitários
-- Documentar APIs públicas
+- Adicionar mais comentarios explicativos
+- Criar testes unitarios
+- Documentar APIs publicas
 
-### 🔍 Análise Detalhada
+###  Analise Detalhada
 
-#### **Código Original**
+#### **Codigo Original**
 \`\`\`javascript
 ${code.substring(0, 200)}${code.length > 200 ? '...' : ''}
 \`\`\`
 
-#### **Sugestões de Refatoração**
+#### **Sugestoes de Refatoracao**
 \`\`\`javascript
-// Versão melhorada
+// Versao melhorada
 function minhaFuncaoMelhorada(param) {
-  // Validação robusta
+  // Validacao robusta
   if (!isValidParam(param)) {
-    throw new ValidationError('Parâmetro inválido');
+    throw new ValidationError('Parametro invalido');
   }
   
   // Processamento otimizado
@@ -284,18 +284,18 @@ function minhaFuncaoMelhorada(param) {
 }
 \`\`\`
 
-### 📊 Score de Qualidade
+###  Score de Qualidade
 - **Legibilidade**: 8/10
 - **Performance**: 6/10
-- **Segurança**: 7/10
+- **Seguranca**: 7/10
 - **Manutenibilidade**: 8/10
 - **Score Geral**: 7.25/10
 
-### 🎯 Recomendações Finais
+###  Recomendacoes Finais
 1. Implementar testes automatizados
 2. Adicionar monitoramento de performance
-3. Criar documentação técnica detalhada
-4. Estabelecer padrões de código da equipe`,
+3. Criar documentacao tecnica detalhada
+4. Estabelecer padroes de codigo da equipe`,
           type: 'review'
         }
       };
@@ -303,7 +303,7 @@ function minhaFuncaoMelhorada(param) {
       const analysisResult = analyses[type] || analyses.explain;
       setResult(analysisResult);
 
-      // Para conexão futura com backend:
+      // Para conexao futura com backend:
       // const { data, error: functionError } = await supabase.functions.invoke('analyze-code', {
       //   body: { code, analysisType: type, projectId: options.projectId }
       // });
@@ -311,9 +311,10 @@ function minhaFuncaoMelhorada(param) {
       // if (data.error) throw new Error(data.error);
       // setResult({ analysis: data.analysis, type });
       
-    } catch (err: any) {
-      console.error('Erro na análise:', err);
-      setError(err.message || 'Erro ao analisar código');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao analisar codigo';
+      console.error('Erro na analise:', err);
+      setError(message);
     } finally {
       setLoading(false);
     }

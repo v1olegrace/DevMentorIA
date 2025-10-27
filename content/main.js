@@ -1,14 +1,16 @@
+/* global chrome, window, document */
+/* eslint-disable no-console, security/detect-object-injection */
 /**
  * DevMentor AI - Content Script Manager (Enterprise Architecture)
  * Smart content script with lazy loading, error boundaries, and performance optimization
  */
 
 class ContentScriptManager {
-  constructor() {
+  constructor () {
     this.isInjected = false;
     this.allowedDomains = [
-      'github.com', 
-      'stackoverflow.com', 
+      'github.com',
+      'stackoverflow.com',
       'developer.mozilla.org'
     ];
     this.messageHandlers = new Map();
@@ -17,11 +19,11 @@ class ContentScriptManager {
     this.init();
   }
 
-  async init() {
+  async init () {
     try {
       // Mark as injected
       window.__DEVMENTOR_CONTENT_SCRIPT_INJECTED__ = true;
-      
+
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => this.setup());
@@ -33,7 +35,7 @@ class ContentScriptManager {
     }
   }
 
-  async setup() {
+  async setup () {
     // Verify we're on an allowed domain
     if (!this.isAllowedDomain()) {
       console.log('[ContentScript] Domain not allowed, skipping setup');
@@ -44,33 +46,33 @@ class ContentScriptManager {
 
     // Set up message listeners
     this.setupMessageHandlers();
-    
+
     // Inject UI components lazily
     this.setupLazyInjection();
-    
+
     // Set up keyboard shortcuts
     this.setupKeyboardHandlers();
-    
+
     // Set up intersection observers for performance
     this.setupIntersectionObservers();
-    
+
     console.log('[ContentScript] ✅ Setup completed successfully');
   }
 
-  isAllowedDomain() {
+  isAllowedDomain () {
     const currentDomain = window.location.hostname;
     return this.allowedDomains.some(domain => currentDomain.includes(domain));
   }
 
-  setupMessageHandlers() {
+  setupMessageHandlers () {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const handler = this.messageHandlers.get(request.action);
-      
+
       if (handler) {
         handler(request, sender, sendResponse);
         return true; // Keep message channel open for async response
       }
-      
+
       console.warn('[ContentScript] Unknown message action:', request.action);
       sendResponse({ success: false, error: `Unknown action: ${request.action}` });
       return false;
@@ -86,7 +88,7 @@ class ContentScriptManager {
     this.messageHandlers.set('inject-sidebar', this.injectSidebar.bind(this));
   }
 
-  async handleExplainSelection(request, sender, sendResponse) {
+  async handleExplainSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'explain-code',
@@ -101,7 +103,7 @@ class ContentScriptManager {
     }
   }
 
-  async handleDebugSelection(request, sender, sendResponse) {
+  async handleDebugSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'debug-code',
@@ -116,7 +118,7 @@ class ContentScriptManager {
     }
   }
 
-  async handleDocumentSelection(request, sender, sendResponse) {
+  async handleDocumentSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'document-code',
@@ -131,7 +133,7 @@ class ContentScriptManager {
     }
   }
 
-  async handleRefactorSelection(request, sender, sendResponse) {
+  async handleRefactorSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'refactor-code',
@@ -146,18 +148,18 @@ class ContentScriptManager {
     }
   }
 
-  setupLazyInjection() {
+  setupLazyInjection () {
     // Simplified for hackathon - no complex UI injection needed
     // Code blocks are already visible and selectable
     console.log('[ContentScript] UI injection skipped (using simple selection mode)');
   }
 
-  async injectUIComponents(targetElement) {
+  async injectUIComponents (targetElement) {
     // Not needed for hackathon demo
     // Users can select code directly on the page
   }
 
-  async injectSidebar(request, sender, sendResponse) {
+  async injectSidebar (request, sender, sendResponse) {
     try {
       if (this.isInjected) {
         sendResponse({ success: true });
@@ -176,7 +178,7 @@ class ContentScriptManager {
     }
   }
 
-  createSimpleSidebar() {
+  createSimpleSidebar () {
     // Create a simple sidebar for hackathon demo
     const sidebar = document.createElement('div');
     sidebar.id = 'devmentor-sidebar';
@@ -207,33 +209,33 @@ class ContentScriptManager {
     document.body.appendChild(sidebar);
   }
 
-  setupKeyboardHandlers() {
+  setupKeyboardHandlers () {
     document.addEventListener('keydown', (event) => {
       // Handle extension shortcuts
       if (event.ctrlKey && event.shiftKey) {
         switch (event.key) {
-          case 'E':
-            event.preventDefault();
-            this.handleExplainShortcut();
-            break;
-          case 'B':
-            event.preventDefault();
-            this.handleDebugShortcut();
-            break;
-          case 'G':
-            event.preventDefault();
-            this.handleDocumentShortcut();
-            break;
-          case 'R':
-            event.preventDefault();
-            this.handleRefactorShortcut();
-            break;
+        case 'E':
+          event.preventDefault();
+          this.handleExplainShortcut();
+          break;
+        case 'B':
+          event.preventDefault();
+          this.handleDebugShortcut();
+          break;
+        case 'G':
+          event.preventDefault();
+          this.handleDocumentShortcut();
+          break;
+        case 'R':
+          event.preventDefault();
+          this.handleRefactorShortcut();
+          break;
         }
       }
     });
   }
 
-  setupIntersectionObservers() {
+  setupIntersectionObservers () {
     // Observer for performance monitoring
     const performanceObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -252,7 +254,7 @@ class ContentScriptManager {
     this.observers.set('performance', performanceObserver);
   }
 
-  async handleExplainShortcut() {
+  async handleExplainShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -284,7 +286,7 @@ class ContentScriptManager {
     }
   }
 
-  async handleDebugShortcut() {
+  async handleDebugShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -316,7 +318,7 @@ class ContentScriptManager {
     }
   }
 
-  async handleDocumentShortcut() {
+  async handleDocumentShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -348,7 +350,7 @@ class ContentScriptManager {
     }
   }
 
-  async handleRefactorShortcut() {
+  async handleRefactorShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -380,10 +382,10 @@ class ContentScriptManager {
     }
   }
 
-  showAnalysisResult(request) {
+  showAnalysisResult (request) {
     const tooltip = this.createAnalysisTooltip(request);
     document.body.appendChild(tooltip);
-    
+
     // Auto-remove after 30 seconds
     setTimeout(() => {
       if (tooltip.parentNode) {
@@ -392,10 +394,10 @@ class ContentScriptManager {
     }, 30000);
   }
 
-  showAnalysisError(request) {
+  showAnalysisError (request) {
     const errorTooltip = this.createErrorTooltip(request);
     document.body.appendChild(errorTooltip);
-    
+
     // Auto-remove after 10 seconds
     setTimeout(() => {
       if (errorTooltip.parentNode) {
@@ -404,7 +406,7 @@ class ContentScriptManager {
     }, 10000);
   }
 
-  createAnalysisTooltip(request) {
+  createAnalysisTooltip (request) {
     const tooltip = document.createElement('div');
     tooltip.className = 'devmentor-analysis-tooltip';
     tooltip.innerHTML = `
@@ -420,16 +422,16 @@ class ContentScriptManager {
         </div>
       </div>
     `;
-    
+
     // Add event listeners
     tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
     tooltip.querySelector('.copy-btn').onclick = () => this.copyToClipboard(request.result);
     tooltip.querySelector('.expand-btn').onclick = () => this.expandTooltip(tooltip);
-    
+
     return tooltip;
   }
 
-  createErrorTooltip(request) {
+  createErrorTooltip (request) {
     const tooltip = document.createElement('div');
     tooltip.className = 'devmentor-error-tooltip';
     tooltip.innerHTML = `
@@ -441,47 +443,47 @@ class ContentScriptManager {
         <div class="error-message">${request.error}</div>
       </div>
     `;
-    
+
     tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
-    
+
     return tooltip;
   }
 
-  getTooltipTitle(type) {
+  getTooltipTitle (type) {
     const titles = {
-      'explanation': 'Code Explanation',
-      'debug': 'Debug Analysis',
-      'documentation': 'Documentation',
-      'refactor': 'Code Refactoring'
+      explanation: 'Code Explanation',
+      debug: 'Debug Analysis',
+      documentation: 'Documentation',
+      refactor: 'Code Refactoring'
     };
     return titles[type] || 'Analysis';
   }
 
-  formatAnalysisResult(result) {
+  formatAnalysisResult (result) {
     if (typeof result === 'string') {
       return result;
     }
-    
+
     if (result.explanation) {
       return result.explanation;
     }
-    
+
     if (result.debugInfo) {
       return result.debugInfo;
     }
-    
+
     if (result.documentation) {
       return result.documentation;
     }
-    
+
     if (result.refactoredCode) {
       return result.refactoredCode;
     }
-    
+
     return JSON.stringify(result, null, 2);
   }
 
-  async copyToClipboard(text) {
+  async copyToClipboard (text) {
     try {
       await navigator.clipboard.writeText(text);
       this.showNotification('Copied to clipboard', 'success');
@@ -491,17 +493,17 @@ class ContentScriptManager {
     }
   }
 
-  expandTooltip(tooltip) {
+  expandTooltip (tooltip) {
     tooltip.classList.toggle('expanded');
   }
 
-  showNotification(message, type = 'info') {
+  showNotification (message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `devmentor-notification devmentor-notification-${type}`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     // Auto-remove after 3 seconds
     setTimeout(() => {
       if (notification.parentNode) {
@@ -510,14 +512,14 @@ class ContentScriptManager {
     }, 3000);
   }
 
-  trackPerformance(element) {
+  trackPerformance (element) {
     // Track performance metrics
     const performanceData = {
       element: element.tagName,
       timestamp: Date.now(),
       url: window.location.href
     };
-    
+
     // Send to background script for analytics
     chrome.runtime.sendMessage({
       action: 'track-performance',
@@ -528,13 +530,13 @@ class ContentScriptManager {
   }
 
   // Cleanup method
-  destroy() {
+  destroy () {
     // Clean up observers
     for (const observer of this.observers.values()) {
       observer.disconnect();
     }
     this.observers.clear();
-    
+
     // Clean up UI components
     for (const component of this.uiComponents.values()) {
       if (component.destroy) {
@@ -542,10 +544,10 @@ class ContentScriptManager {
       }
     }
     this.uiComponents.clear();
-    
+
     // Clean up message handlers
     this.messageHandlers.clear();
-    
+
     console.log('[ContentScript] ✅ Content script destroyed');
   }
 }
@@ -559,21 +561,3 @@ window.addEventListener('beforeunload', () => {
 });
 
 console.log('[ContentScript] ✅ Enterprise content script loaded');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

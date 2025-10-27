@@ -1,3 +1,5 @@
+/* global window, document */
+/* eslint-disable no-console, security/detect-object-injection */
 /**
  * DevMentor AI - Page Bridge Script (MAIN World)
  * Executes in MAIN world to interact with page variables
@@ -8,37 +10,36 @@
 // It can access page variables and global objects
 
 class PageBridge {
-  constructor() {
+  constructor () {
     this.isInitialized = false;
     this.siteType = this.detectSiteType();
     this.init();
   }
 
-  init() {
+  init () {
     if (this.isInitialized) {
       return;
     }
 
     try {
       console.log('[PageBridge] Initializing for site:', this.siteType);
-      
+
       // Set up site-specific integrations
       this.setupSiteIntegration();
-      
+
       // Set up global functions for content script communication
       this.setupGlobalFunctions();
-      
+
       this.isInitialized = true;
       console.log('[PageBridge] ✅ Page bridge initialized');
-      
     } catch (error) {
       console.error('[PageBridge] Initialization failed:', error);
     }
   }
 
-  detectSiteType() {
+  detectSiteType () {
     const hostname = window.location.hostname;
-    
+
     if (hostname.includes('github.com')) {
       return 'github';
     } else if (hostname.includes('stackoverflow.com')) {
@@ -56,36 +57,36 @@ class PageBridge {
     } else if (hostname.includes('codesandbox.io')) {
       return 'codesandbox';
     }
-    
+
     return 'generic';
   }
 
-  setupSiteIntegration() {
+  setupSiteIntegration () {
     switch (this.siteType) {
-      case 'github':
-        this.setupGitHubIntegration();
-        break;
-      case 'stackoverflow':
-        this.setupStackOverflowIntegration();
-        break;
-      case 'mdn':
-        this.setupMDNIntegration();
-        break;
-      case 'codepen':
-        this.setupCodePenIntegration();
-        break;
-      case 'jsfiddle':
-        this.setupJSFiddleIntegration();
-        break;
-      case 'codesandbox':
-        this.setupCodeSandboxIntegration();
-        break;
-      default:
-        this.setupGenericIntegration();
+    case 'github':
+      this.setupGitHubIntegration();
+      break;
+    case 'stackoverflow':
+      this.setupStackOverflowIntegration();
+      break;
+    case 'mdn':
+      this.setupMDNIntegration();
+      break;
+    case 'codepen':
+      this.setupCodePenIntegration();
+      break;
+    case 'jsfiddle':
+      this.setupJSFiddleIntegration();
+      break;
+    case 'codesandbox':
+      this.setupCodeSandboxIntegration();
+      break;
+    default:
+      this.setupGenericIntegration();
     }
   }
 
-  setupGitHubIntegration() {
+  setupGitHubIntegration () {
     // GitHub-specific functionality
     window.__DEVMENTOR_GITHUB__ = {
       // Get repository information
@@ -101,7 +102,7 @@ class PageBridge {
         }
         return null;
       },
-      
+
       // Get current file information
       getCurrentFile: () => {
         const fileElement = document.querySelector('[data-testid="file-name"]');
@@ -114,7 +115,7 @@ class PageBridge {
         }
         return null;
       },
-      
+
       // Get code blocks
       getCodeBlocks: () => {
         const codeBlocks = document.querySelectorAll('pre code, .blob-code-inner');
@@ -125,18 +126,18 @@ class PageBridge {
           lineNumbers: this.getLineNumbers(block)
         }));
       },
-      
+
       // Get selected code with context
       getSelectedCodeWithContext: () => {
         const selection = window.getSelection();
         if (!selection.toString().trim()) {
           return null;
         }
-        
+
         const selectedText = selection.toString();
         const range = selection.getRangeAt(0);
         const codeBlock = range.commonAncestorContainer.closest('pre, .blob-code');
-        
+
         return {
           code: selectedText,
           context: {
@@ -150,21 +151,21 @@ class PageBridge {
     };
   }
 
-  setupStackOverflowIntegration() {
+  setupStackOverflowIntegration () {
     // Stack Overflow-specific functionality
     window.__DEVMENTOR_STACKOVERFLOW__ = {
       // Get question information
       getQuestionInfo: () => {
         const titleElement = document.querySelector('#question-header h1');
         const tagsElement = document.querySelector('.post-taglist');
-        
+
         return {
           title: titleElement?.textContent?.trim(),
           tags: tagsElement ? Array.from(tagsElement.querySelectorAll('.post-tag')).map(tag => tag.textContent) : [],
           url: window.location.href
         };
       },
-      
+
       // Get code blocks
       getCodeBlocks: () => {
         const codeBlocks = document.querySelectorAll('pre code, .s-code-block');
@@ -175,18 +176,18 @@ class PageBridge {
           isAccepted: block.closest('.answer')?.querySelector('.accepted-answer') !== null
         }));
       },
-      
+
       // Get selected code with context
       getSelectedCodeWithContext: () => {
         const selection = window.getSelection();
         if (!selection.toString().trim()) {
           return null;
         }
-        
+
         const selectedText = selection.toString();
         const range = selection.getRangeAt(0);
         const codeBlock = range.commonAncestorContainer.closest('pre');
-        
+
         return {
           code: selectedText,
           context: {
@@ -199,21 +200,21 @@ class PageBridge {
     };
   }
 
-  setupMDNIntegration() {
+  setupMDNIntegration () {
     // MDN-specific functionality
     window.__DEVMENTOR_MDN__ = {
       // Get page information
       getPageInfo: () => {
         const titleElement = document.querySelector('h1');
         const breadcrumbElement = document.querySelector('.breadcrumbs');
-        
+
         return {
           title: titleElement?.textContent?.trim(),
           breadcrumb: breadcrumbElement?.textContent?.trim(),
           url: window.location.href
         };
       },
-      
+
       // Get code examples
       getCodeExamples: () => {
         const codeBlocks = document.querySelectorAll('pre code');
@@ -227,21 +228,21 @@ class PageBridge {
     };
   }
 
-  setupCodePenIntegration() {
+  setupCodePenIntegration () {
     // CodePen-specific functionality
     window.__DEVMENTOR_CODEPEN__ = {
       // Get pen information
       getPenInfo: () => {
         const titleElement = document.querySelector('.pen-title');
         const authorElement = document.querySelector('.pen-author');
-        
+
         return {
           title: titleElement?.textContent?.trim(),
           author: authorElement?.textContent?.trim(),
           url: window.location.href
         };
       },
-      
+
       // Get code from editors
       getCodeFromEditors: () => {
         const editors = {
@@ -249,25 +250,25 @@ class PageBridge {
           css: document.querySelector('#css-editor')?.textContent || '',
           js: document.querySelector('#js-editor')?.textContent || ''
         };
-        
+
         return editors;
       }
     };
   }
 
-  setupJSFiddleIntegration() {
+  setupJSFiddleIntegration () {
     // JSFiddle-specific functionality
     window.__DEVMENTOR_JSFIDDLE__ = {
       // Get fiddle information
       getFiddleInfo: () => {
         const titleElement = document.querySelector('.fiddle-title');
-        
+
         return {
           title: titleElement?.textContent?.trim(),
           url: window.location.href
         };
       },
-      
+
       // Get code from panels
       getCodeFromPanels: () => {
         const panels = {
@@ -275,25 +276,25 @@ class PageBridge {
           css: document.querySelector('#css-panel')?.textContent || '',
           js: document.querySelector('#js-panel')?.textContent || ''
         };
-        
+
         return panels;
       }
     };
   }
 
-  setupCodeSandboxIntegration() {
+  setupCodeSandboxIntegration () {
     // CodeSandbox-specific functionality
     window.__DEVMENTOR_CODESANDBOX__ = {
       // Get sandbox information
       getSandboxInfo: () => {
         const titleElement = document.querySelector('[data-testid="sandbox-title"]');
-        
+
         return {
           title: titleElement?.textContent?.trim(),
           url: window.location.href
         };
       },
-      
+
       // Get file tree
       getFileTree: () => {
         const fileElements = document.querySelectorAll('[data-testid="file-tree-item"]');
@@ -306,7 +307,7 @@ class PageBridge {
     };
   }
 
-  setupGenericIntegration() {
+  setupGenericIntegration () {
     // Generic functionality for any site
     window.__DEVMENTOR_GENERIC__ = {
       // Get page information
@@ -317,7 +318,7 @@ class PageBridge {
           hostname: window.location.hostname
         };
       },
-      
+
       // Get all code blocks
       getCodeBlocks: () => {
         const codeBlocks = document.querySelectorAll('pre code, code');
@@ -327,7 +328,7 @@ class PageBridge {
           language: this.detectLanguage(block)
         }));
       },
-      
+
       // Get selected code
       getSelectedCode: () => {
         const selection = window.getSelection();
@@ -336,46 +337,46 @@ class PageBridge {
     };
   }
 
-  setupGlobalFunctions() {
+  setupGlobalFunctions () {
     // Global functions for content script communication
     window.__DEVMENTOR_BRIDGE__ = {
       // Get site-specific data
       getSiteData: () => {
         switch (this.siteType) {
-          case 'github':
-            return window.__DEVMENTOR_GITHUB__;
-          case 'stackoverflow':
-            return window.__DEVMENTOR_STACKOVERFLOW__;
-          case 'mdn':
-            return window.__DEVMENTOR_MDN__;
-          case 'codepen':
-            return window.__DEVMENTOR_CODEPEN__;
-          case 'jsfiddle':
-            return window.__DEVMENTOR_JSFIDDLE__;
-          case 'codesandbox':
-            return window.__DEVMENTOR_CODESANDBOX__;
-          default:
-            return window.__DEVMENTOR_GENERIC__;
+        case 'github':
+          return window.__DEVMENTOR_GITHUB__;
+        case 'stackoverflow':
+          return window.__DEVMENTOR_STACKOVERFLOW__;
+        case 'mdn':
+          return window.__DEVMENTOR_MDN__;
+        case 'codepen':
+          return window.__DEVMENTOR_CODEPEN__;
+        case 'jsfiddle':
+          return window.__DEVMENTOR_JSFIDDLE__;
+        case 'codesandbox':
+          return window.__DEVMENTOR_CODESANDBOX__;
+        default:
+          return window.__DEVMENTOR_GENERIC__;
         }
       },
-      
+
       // Get selected code with context
       getSelectedCodeWithContext: () => {
         const siteData = this.getSiteData();
         if (siteData && siteData.getSelectedCodeWithContext) {
           return siteData.getSelectedCodeWithContext();
         }
-        
+
         // Fallback to generic selection
         const selection = window.getSelection();
         return selection.toString().trim() || null;
       },
-      
+
       // Detect language from element
       detectLanguage: (element) => {
         return this.detectLanguage(element);
       },
-      
+
       // Get site type
       getSiteType: () => {
         return this.siteType;
@@ -383,9 +384,9 @@ class PageBridge {
     };
   }
 
-  detectLanguage(element) {
+  detectLanguage (element) {
     if (!element) return 'unknown';
-    
+
     // Check for language classes
     const classList = element.classList;
     for (const className of classList) {
@@ -396,7 +397,7 @@ class PageBridge {
         return className.replace('lang-', '');
       }
     }
-    
+
     // Check parent elements
     const parent = element.parentElement;
     if (parent) {
@@ -406,43 +407,43 @@ class PageBridge {
         }
       }
     }
-    
+
     // Detect from file extension or content
     const text = element.textContent || '';
     return this.detectLanguageFromContent(text);
   }
 
-  detectLanguageFromPath(path) {
+  detectLanguageFromPath (path) {
     const extension = path.split('.').pop()?.toLowerCase();
     const languageMap = {
-      'js': 'javascript',
-      'ts': 'typescript',
-      'py': 'python',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'php': 'php',
-      'rb': 'ruby',
-      'go': 'go',
-      'rs': 'rust',
-      'html': 'html',
-      'css': 'css',
-      'scss': 'scss',
-      'sass': 'sass',
-      'json': 'json',
-      'xml': 'xml',
-      'yaml': 'yaml',
-      'yml': 'yaml',
-      'md': 'markdown',
-      'sh': 'bash',
-      'sql': 'sql'
+      js: 'javascript',
+      ts: 'typescript',
+      py: 'python',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      cs: 'csharp',
+      php: 'php',
+      rb: 'ruby',
+      go: 'go',
+      rs: 'rust',
+      html: 'html',
+      css: 'css',
+      scss: 'scss',
+      sass: 'sass',
+      json: 'json',
+      xml: 'xml',
+      yaml: 'yaml',
+      yml: 'yaml',
+      md: 'markdown',
+      sh: 'bash',
+      sql: 'sql'
     };
-    
+
     return languageMap[extension] || 'unknown';
   }
 
-  detectLanguageFromContent(text) {
+  detectLanguageFromContent (text) {
     // Simple heuristics for language detection
     if (text.includes('function') && text.includes('var')) return 'javascript';
     if (text.includes('def ') && text.includes('import ')) return 'python';
@@ -454,25 +455,25 @@ class PageBridge {
     if (text.includes('def ') && text.includes('end')) return 'ruby';
     if (text.includes('<html') || text.includes('<div')) return 'html';
     if (text.includes('{') && text.includes('}') && text.includes(':')) return 'css';
-    
+
     return 'unknown';
   }
 
-  getLineNumbers(element) {
+  getLineNumbers (element) {
     if (!element) return null;
-    
+
     // Try to find line numbers in GitHub
     const lineNumbers = element.parentElement?.querySelectorAll('.blob-num');
     if (lineNumbers && lineNumbers.length > 0) {
       return Array.from(lineNumbers).map(num => parseInt(num.textContent));
     }
-    
+
     return null;
   }
 
-  getCodeDescription(element) {
+  getCodeDescription (element) {
     if (!element) return null;
-    
+
     // Try to find description in MDN
     const description = element.parentElement?.querySelector('p');
     return description?.textContent?.trim() || null;
@@ -480,24 +481,6 @@ class PageBridge {
 }
 
 // Initialize page bridge
-const pageBridge = new PageBridge();
-
+window.DevMentorPageBridge = new PageBridge();
+console.log('[PageBridge] Page bridge loaded in MAIN world');
 console.log('[PageBridge] ✅ Page bridge loaded in MAIN world');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

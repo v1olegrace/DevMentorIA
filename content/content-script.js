@@ -1,3 +1,5 @@
+/* global chrome, window, document */
+/* eslint-disable no-console, security/detect-object-injection */
 /**
  * DevMentor AI - Minimal Content Script (Dynamic Injection)
  * Injected only when needed via chrome.scripting.executeScript
@@ -8,43 +10,42 @@
 window.__DEVMENTOR_CONTENT_SCRIPT_INJECTED__ = true;
 
 class MinimalContentScript {
-  constructor() {
+  constructor () {
     this.isInitialized = false;
     this.messageHandlers = new Map();
     this.init();
   }
 
-  async init() {
+  async init () {
     if (this.isInitialized) {
       return;
     }
 
     try {
       console.log('[ContentScript] Minimal content script initialized');
-      
+
       // Set up message handlers
       this.setupMessageHandlers();
-      
+
       // Set up keyboard shortcuts
       this.setupKeyboardHandlers();
-      
+
       this.isInitialized = true;
       console.log('[ContentScript] ✅ Setup completed');
-      
     } catch (error) {
       console.error('[ContentScript] Initialization failed:', error);
     }
   }
 
-  setupMessageHandlers() {
+  setupMessageHandlers () {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const handler = this.messageHandlers.get(request.action);
-      
+
       if (handler) {
         handler(request, sender, sendResponse);
         return true; // Keep message channel open for async response
       }
-      
+
       console.warn('[ContentScript] Unknown message action:', request.action);
       sendResponse({ success: false, error: `Unknown action: ${request.action}` });
       return false;
@@ -64,7 +65,7 @@ class MinimalContentScript {
   }
 
   // NEW: Obter código selecionado
-  handleGetSelectedCode(request, sender, sendResponse) {
+  handleGetSelectedCode (request, sender, sendResponse) {
     try {
       const selectedText = window.getSelection().toString().trim();
 
@@ -79,7 +80,7 @@ class MinimalContentScript {
       sendResponse({
         success: true,
         code: selectedText,
-        language: language
+        language
       });
     } catch (error) {
       console.error('[ContentScript] GetSelectedCode failed:', error);
@@ -88,7 +89,7 @@ class MinimalContentScript {
   }
 
   // NEW: Exibir resultado da análise
-  handleShowResult(request, sender, sendResponse) {
+  handleShowResult (request, sender, sendResponse) {
     try {
       this.showAnalysisResult({
         type: request.type,
@@ -104,7 +105,7 @@ class MinimalContentScript {
   }
 
   // NEW: Detector de linguagem
-  detectLanguage(code) {
+  detectLanguage (code) {
     // Detecção simples baseada em padrões
     if (code.includes('function') || code.includes('const') || code.includes('let') || code.includes('=>')) {
       return 'javascript';
@@ -128,7 +129,7 @@ class MinimalContentScript {
     return 'javascript'; // default
   }
 
-  async handleExplainSelection(request, sender, sendResponse) {
+  async handleExplainSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'explain-code',
@@ -143,7 +144,7 @@ class MinimalContentScript {
     }
   }
 
-  async handleDebugSelection(request, sender, sendResponse) {
+  async handleDebugSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'debug-code',
@@ -158,7 +159,7 @@ class MinimalContentScript {
     }
   }
 
-  async handleDocumentSelection(request, sender, sendResponse) {
+  async handleDocumentSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'document-code',
@@ -173,7 +174,7 @@ class MinimalContentScript {
     }
   }
 
-  async handleRefactorSelection(request, sender, sendResponse) {
+  async handleRefactorSelection (request, sender, sendResponse) {
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'refactor-code',
@@ -188,33 +189,33 @@ class MinimalContentScript {
     }
   }
 
-  setupKeyboardHandlers() {
+  setupKeyboardHandlers () {
     document.addEventListener('keydown', (event) => {
       // Handle extension shortcuts
       if (event.ctrlKey && event.shiftKey) {
         switch (event.key) {
-          case 'E':
-            event.preventDefault();
-            this.handleExplainShortcut();
-            break;
-          case 'B':
-            event.preventDefault();
-            this.handleDebugShortcut();
-            break;
-          case 'G':
-            event.preventDefault();
-            this.handleDocumentShortcut();
-            break;
-          case 'R':
-            event.preventDefault();
-            this.handleRefactorShortcut();
-            break;
+        case 'E':
+          event.preventDefault();
+          this.handleExplainShortcut();
+          break;
+        case 'B':
+          event.preventDefault();
+          this.handleDebugShortcut();
+          break;
+        case 'G':
+          event.preventDefault();
+          this.handleDocumentShortcut();
+          break;
+        case 'R':
+          event.preventDefault();
+          this.handleRefactorShortcut();
+          break;
         }
       }
     });
   }
 
-  async handleExplainShortcut() {
+  async handleExplainShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -246,7 +247,7 @@ class MinimalContentScript {
     }
   }
 
-  async handleDebugShortcut() {
+  async handleDebugShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -278,7 +279,7 @@ class MinimalContentScript {
     }
   }
 
-  async handleDocumentShortcut() {
+  async handleDocumentShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -310,7 +311,7 @@ class MinimalContentScript {
     }
   }
 
-  async handleRefactorShortcut() {
+  async handleRefactorShortcut () {
     const selectedCode = window.getSelection().toString().trim();
     if (!selectedCode) {
       this.showNotification('Please select some code first', 'warning');
@@ -342,10 +343,10 @@ class MinimalContentScript {
     }
   }
 
-  showAnalysisResult(request) {
+  showAnalysisResult (request) {
     const tooltip = this.createAnalysisTooltip(request);
     document.body.appendChild(tooltip);
-    
+
     // Auto-remove after 30 seconds
     setTimeout(() => {
       if (tooltip.parentNode) {
@@ -354,10 +355,10 @@ class MinimalContentScript {
     }, 30000);
   }
 
-  showAnalysisError(request) {
+  showAnalysisError (request) {
     const errorTooltip = this.createErrorTooltip(request);
     document.body.appendChild(errorTooltip);
-    
+
     // Auto-remove after 10 seconds
     setTimeout(() => {
       if (errorTooltip.parentNode) {
@@ -366,7 +367,7 @@ class MinimalContentScript {
     }, 10000);
   }
 
-  createAnalysisTooltip(request) {
+  createAnalysisTooltip (request) {
     const tooltip = document.createElement('div');
     tooltip.className = 'devmentor-analysis-tooltip';
     tooltip.innerHTML = `
@@ -382,16 +383,16 @@ class MinimalContentScript {
         </div>
       </div>
     `;
-    
+
     // Add event listeners
     tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
     tooltip.querySelector('.copy-btn').onclick = () => this.copyToClipboard(request.result);
     tooltip.querySelector('.expand-btn').onclick = () => this.expandTooltip(tooltip);
-    
+
     return tooltip;
   }
 
-  createErrorTooltip(request) {
+  createErrorTooltip (request) {
     const tooltip = document.createElement('div');
     tooltip.className = 'devmentor-error-tooltip';
     tooltip.innerHTML = `
@@ -403,28 +404,28 @@ class MinimalContentScript {
         <div class="error-message">${request.error}</div>
       </div>
     `;
-    
+
     tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
-    
+
     return tooltip;
   }
 
-  getTooltipTitle(type) {
+  getTooltipTitle (type) {
     const titles = {
-      'explanation': '🔍 Explicação do Código',
-      'explain': '🔍 Explicação do Código',
-      'debug': '🐛 Análise de Bugs',
-      'bugs': '🐛 Análise de Bugs',
-      'documentation': '📄 Documentação',
-      'docs': '📄 Documentação',
-      'refactor': '⚡ Otimização',
-      'optimize': '⚡ Otimização',
-      'review': '✅ Revisão de Código'
+      explanation: '🔍 Explicação do Código',
+      explain: '🔍 Explicação do Código',
+      debug: '🐛 Análise de Bugs',
+      bugs: '🐛 Análise de Bugs',
+      documentation: '📄 Documentação',
+      docs: '📄 Documentação',
+      refactor: '⚡ Otimização',
+      optimize: '⚡ Otimização',
+      review: '✅ Revisão de Código'
     };
     return titles[type] || 'Análise';
   }
 
-  formatAnalysisResult(result) {
+  formatAnalysisResult (result) {
     if (typeof result === 'string') {
       return `<pre class="analysis-text">${this.escapeHtml(result)}</pre>`;
     }
@@ -468,13 +469,13 @@ class MinimalContentScript {
     return `<pre class="analysis-text">${this.escapeHtml(JSON.stringify(result, null, 2))}</pre>`;
   }
 
-  escapeHtml(text) {
+  escapeHtml (text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
 
-  async copyToClipboard(text) {
+  async copyToClipboard (text) {
     try {
       await navigator.clipboard.writeText(text);
       this.showNotification('Copied to clipboard', 'success');
@@ -484,17 +485,17 @@ class MinimalContentScript {
     }
   }
 
-  expandTooltip(tooltip) {
+  expandTooltip (tooltip) {
     tooltip.classList.toggle('expanded');
   }
 
-  showNotification(message, type = 'info') {
+  showNotification (message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `devmentor-notification devmentor-notification-${type}`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     // Auto-remove after 3 seconds
     setTimeout(() => {
       if (notification.parentNode) {
@@ -504,7 +505,5 @@ class MinimalContentScript {
   }
 }
 
-// Initialize minimal content script
-const minimalContentScript = new MinimalContentScript();
-
-console.log('[ContentScript] ✅ Minimal content script loaded');
+window.DevMentorContentScript = new MinimalContentScript();
+console.log('[ContentScript] Minimal content script loaded');

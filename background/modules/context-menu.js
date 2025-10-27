@@ -1,69 +1,37 @@
 /**
- * DevMentor AI - Context Menu Manager Module
- * Handles context menu creation and management with proper error handling
+ * Thin wrapper around chrome.contextMenus with Promise helpers.
  */
 
+/* eslint-disable no-console */
+
 export class ContextMenuManager {
-  constructor() {
-    this.createdMenus = new Set();
+  async create (item) {
+    await this.clear(item.id);
+
+    return new Promise((resolve, reject) => {
+      chrome.contextMenus.create(item, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
-  async create(menuItem) {
-    try {
-      await chrome.contextMenus.create(menuItem);
-      this.createdMenus.add(menuItem.id);
-      console.log(`[ContextMenuManager] Created menu: ${menuItem.id}`);
-    } catch (error) {
-      console.error(`[ContextMenuManager] Failed to create menu ${menuItem.id}:`, error);
-      throw error;
-    }
+  async clear (id) {
+    if (!id) return;
+
+    return new Promise(resolve => {
+      chrome.contextMenus.remove(id, () => resolve());
+    });
   }
 
-  async clearAll() {
-    try {
-      await chrome.contextMenus.removeAll();
-      this.createdMenus.clear();
-      console.log('[ContextMenuManager] ✅ All context menus cleared');
-    } catch (error) {
-      console.error('[ContextMenuManager] Failed to clear menus:', error);
-      throw error;
-    }
-  }
-
-  async remove(menuItemId) {
-    try {
-      await chrome.contextMenus.remove(menuItemId);
-      this.createdMenus.delete(menuItemId);
-      console.log(`[ContextMenuManager] Removed menu: ${menuItemId}`);
-    } catch (error) {
-      console.error(`[ContextMenuManager] Failed to remove menu ${menuItemId}:`, error);
-      throw error;
-    }
-  }
-
-  hasMenu(menuItemId) {
-    return this.createdMenus.has(menuItemId);
-  }
-
-  getCreatedMenus() {
-    return Array.from(this.createdMenus);
+  async clearAll () {
+    return new Promise(resolve => {
+      chrome.contextMenus.removeAll(() => resolve());
+    });
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+export default ContextMenuManager;

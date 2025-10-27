@@ -4,9 +4,7 @@
  */
 
 class ScreenshotHandler {
-  constructor() {}
-
-  async captureScreenshot() {
+  async captureScreenshot () {
     // Expect UIManager to have injected a hidden file input
     const input = document.getElementById('devmentorFileInput');
     if (!input) throw new Error('File input not available');
@@ -28,7 +26,7 @@ class ScreenshotHandler {
     };
   }
 
-  waitForFileSelection(inputEl) {
+  waitForFileSelection (inputEl) {
     return new Promise((resolve, reject) => {
       const cleanup = () => {
         inputEl.value = '';
@@ -49,7 +47,3 @@ class ScreenshotHandler {
 }
 
 window.ScreenshotHandler = ScreenshotHandler;
-
-
-
-

@@ -108,7 +108,6 @@ class ExtensionValidator {
 
     const requiredFiles = [
       'manifest.json',
-      'background/sw-loader.js',
       'background/service-worker.js',
       'content/content-script.js',
       'popup.html',

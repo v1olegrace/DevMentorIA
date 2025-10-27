@@ -1,4 +1,4 @@
-// Serviço para analisar a complexidade de problemas de código
+// Servico para analisar a complexidade de problemas de codigo
 
 import { ComplexityAnalysis, ProblemComplexity, AI_MODELS } from '@/types/ai-config';
 
@@ -12,24 +12,24 @@ interface CodeContext {
 
 export class ComplexityAnalyzer {
   /**
-   * Analisa a complexidade de um problema de código
+   * Analisa a complexidade de um problema de codigo
    */
   static analyze(context: CodeContext): ComplexityAnalysis {
     const { code = '', language = 'javascript', action, errorMessage = '', context: additionalContext = '' } = context;
 
-    // Determinar categoria baseado na ação
+    // Determinar categoria baseado na acao
     const category = this.determineCategory(action);
 
     // Calcular complexidade
     const complexity = this.calculateComplexity(code, language, action, errorMessage, additionalContext);
 
-    // Estimar tokens necessários
+    // Estimar tokens necessarios
     const estimatedTokens = this.estimateTokens(code, additionalContext, complexity);
 
     // Recomendar modelos
     const recommendedModels = this.recommendModels(complexity, category, estimatedTokens);
 
-    // Gerar raciocínio
+    // Gerar raciocinio
     const reasoning = this.generateReasoning(complexity, category, code, action);
 
     return {
@@ -69,13 +69,13 @@ export class ComplexityAnalyzer {
   ): ProblemComplexity {
     let score = 0;
 
-    // Tamanho do código (0-3 pontos)
+    // Tamanho do codigo (0-3 pontos)
     const lines = code.split('\n').length;
     if (lines > 200) score += 3;
     else if (lines > 100) score += 2;
     else if (lines > 50) score += 1;
 
-    // Complexidade ciclomática estimada (0-3 pontos)
+    // Complexidade ciclomatica estimada (0-3 pontos)
     const ifCount = (code.match(/\b(if|else|switch|case)\b/g) || []).length;
     const loopCount = (code.match(/\b(for|while|do)\b/g) || []).length;
     const complexity = ifCount + loopCount * 2;
@@ -83,7 +83,7 @@ export class ComplexityAnalyzer {
     else if (complexity > 10) score += 2;
     else if (complexity > 5) score += 1;
 
-    // Tipo de ação (0-2 pontos)
+    // Tipo de acao (0-2 pontos)
     if (action === 'debug' && errorMessage) score += 2;
     else if (action === 'refactor' || action === 'optimize') score += 2;
     else if (action === 'explain') score += 1;
@@ -92,13 +92,13 @@ export class ComplexityAnalyzer {
     const complexFrameworks = /\b(react|vue|angular|typescript|graphql|nextjs|nestjs)\b/i;
     if (complexFrameworks.test(code) || complexFrameworks.test(context)) score += 2;
 
-    // Padrões complexos (0-2 pontos)
+    // Padroes complexos (0-2 pontos)
     const complexPatterns = /\b(async|await|promise|callback|closure|decorator|generic)\b/i;
     if (complexPatterns.test(code)) score += 1;
     const veryComplexPatterns = /\b(rxjs|redux|mobx|websocket|webrtc|webgl)\b/i;
     if (veryComplexPatterns.test(code) || veryComplexPatterns.test(context)) score += 2;
 
-    // Converter pontuação em complexidade
+    // Converter pontuacao em complexidade
     if (score >= 10) return 'expert';
     if (score >= 7) return 'complex';
     if (score >= 4) return 'medium';
@@ -106,7 +106,7 @@ export class ComplexityAnalyzer {
   }
 
   /**
-   * Estima tokens necessários para a resposta
+   * Estima tokens necessarios para a resposta
    */
   private static estimateTokens(code: string, context: string, complexity: ProblemComplexity): number {
     const baseTokens = Math.ceil((code.length + context.length) / 4); // ~4 chars por token
@@ -140,7 +140,7 @@ export class ComplexityAnalyzer {
       return modelComplexityIndex <= minComplexityIndex && model.maxTokens >= estimatedTokens;
     });
 
-    // Ordenar por força na categoria específica
+    // Ordenar por forca na categoria especifica
     const sorted = suitableModels.sort((a, b) => {
       const scoreA = a.strengths[category] - (a.costPerToken * 1000000); // Considerar custo
       const scoreB = b.strengths[category] - (b.costPerToken * 1000000);
@@ -152,7 +152,7 @@ export class ComplexityAnalyzer {
   }
 
   /**
-   * Gera raciocínio da análise
+   * Gera raciocinio da analise
    */
   private static generateReasoning(
     complexity: ProblemComplexity,
@@ -165,25 +165,25 @@ export class ComplexityAnalyzer {
 
     // Complexidade
     const complexityMessages: Record<ProblemComplexity, string> = {
-      simple: 'Problema simples que pode ser resolvido com modelos mais rápidos e econômicos.',
-      medium: 'Problema de complexidade média que requer um modelo balanceado.',
+      simple: 'Problema simples que pode ser resolvido com modelos mais rapidos e economicos.',
+      medium: 'Problema de complexidade media que requer um modelo balanceado.',
       complex: 'Problema complexo que requer um modelo mais poderoso.',
-      expert: 'Problema muito complexo que requer os modelos mais avançados disponíveis.'
+      expert: 'Problema muito complexo que requer os modelos mais avancados disponiveis.'
     };
     reasons.push(complexityMessages[complexity]);
 
     // Tamanho
     if (lines > 100) {
-      reasons.push(`Código extenso (${lines} linhas) requer contexto maior.`);
+      reasons.push(`Codigo extenso (${lines} linhas) requer contexto maior.`);
     }
 
     // Categoria
     const categoryMessages: Record<string, string> = {
       frontend: 'Otimizado para desenvolvimento frontend (React, Vue, etc).',
       backend: 'Otimizado para desenvolvimento backend e arquitetura.',
-      debugging: 'Otimizado para análise de erros e debugging.',
-      refactoring: 'Otimizado para refatoração e melhoria de código.',
-      documentation: 'Otimizado para explicações e documentação.'
+      debugging: 'Otimizado para analise de erros e debugging.',
+      refactoring: 'Otimizado para refatoracao e melhoria de codigo.',
+      documentation: 'Otimizado para explicacoes e documentacao.'
     };
     reasons.push(categoryMessages[category] || '');
 
@@ -191,11 +191,11 @@ export class ComplexityAnalyzer {
   }
 
   /**
-   * Detecta a linguagem do código
+   * Detecta a linguagem do codigo
    */
   static detectLanguage(code: string): string {
     // Detectar React/JSX
-    if (/<[A-Z][a-zA-Z]*[\s\/>]/.test(code) || /import.*from\s+['"]react['"]/.test(code)) {
+    if (/<[A-Z][a-zA-Z]*[\s/>]/.test(code) || /import.*from\s+['"]react['"]/.test(code)) {
       return 'react';
     }
 

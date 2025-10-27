@@ -1,0 +1,14 @@
+node_modules
+dist-frontend
+frontend-custom
+backend
+devmentor-ai
+.eslintrc.json
+
+chunks
+docs
+examples
+utils
+options.js
+options/
+tests

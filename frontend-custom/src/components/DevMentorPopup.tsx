@@ -19,9 +19,7 @@ import {
   Search
 } from "lucide-react";
 
-interface DevMentorPopupProps {}
-
-const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
+const DevMentorPopup: React.FC = () => {
   const [selectedFunction, setSelectedFunction] = useState<FunctionType>("explain");
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,26 +54,26 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
     try {
       setLoading(true);
 
-      // Verificar se há código selecionado na página
+      // Verificar se ha codigo selecionado na pagina
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const currentTab = tabs[0];
 
       if (!currentTab.id) {
-        toast.error("Não foi possível acessar a aba atual");
+        toast.error("Nao foi possivel acessar a aba atual");
         return;
       }
 
-      // Obter código selecionado da página
+      // Obter codigo selecionado da pagina
       const response = await chrome.tabs.sendMessage(currentTab.id, {
         action: 'getSelectedCode'
       });
 
       if (!response?.code) {
-        toast.error("Por favor, selecione algum código na página primeiro");
+        toast.error("Por favor, selecione algum codigo na pagina primeiro");
         return;
       }
 
-      // Mapear tipo de função para ação do back-end
+      // Mapear tipo de funcao para acao do back-end
       const actionMap: Record<FunctionType, string> = {
         'explain': 'explain-code',
         'bugs': 'debug-code',
@@ -104,19 +102,19 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
           data: result.data
         });
 
-        toast.success("Análise concluída! Verifique o resultado na página.");
+        toast.success("Analise concluida! Verifique o resultado na pagina.");
 
-        // Fechar popup após 1.5 segundos
+        // Fechar popup apos 1.5 segundos
         setTimeout(() => {
           window.close();
         }, 1500);
       } else {
-        toast.error(result.error || "Erro ao processar análise");
+        toast.error(result.error || "Erro ao processar analise");
       }
 
     } catch (error) {
-      console.error('Erro na análise:', error);
-      toast.error("Erro ao iniciar análise. Verifique se há código selecionado.");
+      console.error('Erro na analise:', error);
+      toast.error("Erro ao iniciar analise. Verifique se ha codigo selecionado.");
     } finally {
       setLoading(false);
     }
@@ -127,12 +125,12 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
   };
 
   const handleOpenHistory = () => {
-    // Abrir página de histórico em nova aba
+    // Abrir pagina de historico em nova aba
     chrome.tabs.create({ url: chrome.runtime.getURL('history.html') });
   };
 
   const handleOpenAnalytics = () => {
-    // Abrir página de analytics em nova aba
+    // Abrir pagina de analytics em nova aba
     chrome.tabs.create({ url: chrome.runtime.getURL('analytics.html') });
   };
 
@@ -164,7 +162,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Faça sua pergunta..."
+          placeholder="Faca sua pergunta..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 h-12 text-sm bg-background/50 backdrop-blur-sm border-primary/20 focus:border-primary"
@@ -193,7 +191,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
             {aiStatus.initialized && aiStatus.aiAvailable
               ? 'IA Pronta'
               : aiStatus.initialized
-                ? 'IA Indisponível'
+                ? 'IA Indisponivel'
                 : 'Inicializando...'}
           </span>
         </Badge>
@@ -202,7 +200,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
       {/* Function Selection */}
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-foreground mb-2">
-          Escolha o tipo de análise:
+          Escolha o tipo de analise:
         </h3>
         <div className="grid grid-cols-1 gap-2">
           {functions.map((func) => {
@@ -242,7 +240,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
           ) : (
             <>
               <Sparkles className="w-5 h-5 mr-2" />
-              Analisar Código Selecionado
+              Analisar Codigo Selecionado
             </>
           )}
         </Button>
@@ -255,7 +253,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
             className="h-8"
           >
             <History className="w-4 h-4 mr-1" />
-            Histórico
+            Historico
           </Button>
           <Button
             variant="outline"
@@ -273,8 +271,8 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
       <Card className="p-3">
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>Como usar:</strong></p>
-          <p>1. Selecione código na página</p>
-          <p>2. Escolha o tipo de análise</p>
+          <p>1. Selecione codigo na pagina</p>
+          <p>2. Escolha o tipo de analise</p>
           <p>3. Clique em "Analisar"</p>
           <p>4. Veja o resultado na sidebar</p>
         </div>
@@ -283,7 +281,7 @@ const DevMentorPopup: React.FC<DevMentorPopupProps> = () => {
       {/* Footer */}
       <div className="mt-4 text-center">
         <p className="text-xs text-muted-foreground">
-          ⌨️ <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Ctrl+Shift+A</kbd> para atalho rápido
+           <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Ctrl+Shift+A</kbd> para atalho rapido
         </p>
       </div>
     </div>

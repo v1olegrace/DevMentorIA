@@ -8,6 +8,31 @@ interface AnalysisOptions {
   detailLevel?: 'basic' | 'detailed' | 'comprehensive';
 }
 
+interface RichContent {
+  video?: unknown;
+  diagrams?: unknown[];
+  citations?: unknown[];
+  metaphors?: unknown[];
+  quizzes?: unknown[];
+  exercises?: unknown[];
+}
+
+interface AnalysisHistoryItem {
+  id: number;
+  code: string;
+  type: FunctionType;
+  result: string;
+  createdAt: string;
+  projectId?: string;
+  metadata?: AnalysisResult['metadata'];
+}
+
+interface AnalysisStats {
+  totalAnalyses: number;
+  totalTime: number;
+  lastUsed: string;
+}
+
 interface AnalysisResult {
   analysis: string;
   type: FunctionType;
@@ -18,14 +43,7 @@ interface AnalysisResult {
     language?: string;
     complexity?: string;
   };
-  richContent?: {
-    video?: any;
-    diagrams?: any[];
-    citations?: any[];
-    metaphors?: any[];
-    quizzes?: any[];
-    exercises?: any[];
-  };
+  richContent?: RichContent;
 }
 
 export const useDevMentorAnalysis = () => {
@@ -33,13 +51,13 @@ export const useDevMentorAnalysis = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  const analyzeCode = useCallback(async (
+  const analyzeCode = async (
     code: string, 
     type: FunctionType, 
     options: AnalysisOptions = {}
   ) => {
     if (!code.trim()) {
-      setError('Por favor, insira algum código para análise');
+      setError('Por favor, insira algum cA3digo para anAlise');
       return;
     }
 
@@ -50,22 +68,22 @@ export const useDevMentorAnalysis = () => {
     try {
       const startTime = performance.now();
 
-      // Detectar linguagem automaticamente se não especificada
+      // Detectar linguagem automaticamente se nAo especificada
       const language = options.language || detectLanguage(code);
       const userLevel = options.userLevel || 'intermediate';
 
-      // 1. Análise básica com Chrome AI
+      // 1. AnAlise bAsica com Chrome AI
       const basicAnalysis = await performBasicAnalysis(code, type, language, options);
       
-      // 2. Análise avançada com Media Rich Engine (se disponível)
-      let richContent = null;
+      // 2. AnAlise avanAada com Media Rich Engine (se disponAvel)
+      let richContent: RichContent | null = null;
       try {
         richContent = await performRichAnalysis(code, type, language, userLevel);
       } catch (richError) {
         console.warn('Rich analysis not available, using basic analysis:', richError);
       }
 
-      // 3. Análise específica por tipo
+      // 3. AnAlise especAfica por tipo
       const specificAnalysis = await performSpecificAnalysis(code, type, language, options);
 
       // 4. Combinar resultados
@@ -87,22 +105,23 @@ export const useDevMentorAnalysis = () => {
 
       setResult(analysisResult);
 
-      // Salvar no histórico
+      // Salvar no histA3rico
       await saveToHistory(analysisResult, code, options);
 
-      // Atualizar estatísticas
+      // Atualizar estatAsticas
       await updateStats(processingTime);
 
       // Injetar sidebar com resultado
       await injectSidebar(analysisResult, type);
 
-    } catch (err: any) {
-      console.error('Erro na análise DevMentor AI:', err);
-      setError(err.message || 'Erro ao analisar código');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao analisar codigo';
+      console.error('Erro na analise DevMentor AI:', err);
+      setError(message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   const performBasicAnalysis = async (code: string, type: FunctionType, language: string, options: AnalysisOptions) => {
     try {
@@ -125,7 +144,7 @@ export const useDevMentorAnalysis = () => {
       console.warn('Chrome AI not available, using fallback');
     }
 
-    // Fallback para análise local
+    // Fallback para anAlise local
     return generateFallbackAnalysis(code, type, language, options);
   };
 
@@ -163,152 +182,152 @@ export const useDevMentorAnalysis = () => {
   };
 
   const generateExplanationAnalysis = async (code: string, language: string, options: AnalysisOptions) => {
-    return `## 🔍 Análise Explicativa Detalhada
+    return `## Y AnAlise Explicativa Detalhada
 
-### 📋 Visão Geral
-Este código ${language} implementa funcionalidades específicas que serão analisadas em detalhes.
+### Y VisAo Geral
+Este cA3digo ${language} implementa funcionalidades especAficas que serAo analisadas em detalhes.
 
-### 🧩 Componentes Principais
+### Y Componentes Principais
 ${analyzeCodeStructure(code, language)}
 
-### 🔄 Fluxo de Execução
+### Y Fluxo de ExecuAAo
 ${analyzeExecutionFlow(code, language)}
 
-### 💡 Conceitos Importantes
+### Y Conceitos Importantes
 ${extractKeyConcepts(code, language)}
 
-### 🎯 Aplicações Práticas
+### YZ  AplicaAAes PrAticas
 ${generatePracticalExamples(code, language)}
 
-### 📚 Recursos para Aprofundamento
+### Ys Recursos para Aprofundamento
 ${generateLearningResources(code, language)}`;
   };
 
   const generateBugAnalysis = async (code: string, language: string, options: AnalysisOptions) => {
-    return `## 🐛 Análise de Bugs e Problemas
+    return `## Y AnAlise de Bugs e Problemas
 
-### ⚠️ Problemas Identificados
+### as i  Problemas Identificados
 ${identifyBugs(code, language)}
 
-### 🔧 Correções Sugeridas
+### Y CorreAAes Sugeridas
 ${generateBugFixes(code, language)}
 
-### 🛡️ Prevenção de Problemas
+### Yi  PrevenAAo de Problemas
 ${generatePreventionTips(code, language)}
 
-### 🧪 Testes Recomendados
+### Ya Testes Recomendados
 ${generateTestSuggestions(code, language)}
 
-### 📊 Métricas de Qualidade
+### YS MAtricas de Qualidade
 ${generateQualityMetrics(code, language)}`;
   };
 
   const generateDocumentationAnalysis = async (code: string, language: string, options: AnalysisOptions) => {
-    return `## 📝 Documentação Completa
+    return `## Y DocumentaAAo Completa
 
-### 📖 Descrição Geral
+### Y DescriAAo Geral
 ${generateGeneralDescription(code, language)}
 
-### 🔧 Documentação de Funções
+### Y DocumentaAAo de FunAAes
 ${generateFunctionDocumentation(code, language)}
 
-### 📋 Parâmetros e Retornos
+### Y ParAmetros e Retornos
 ${generateParameterDocumentation(code, language)}
 
-### 💡 Exemplos de Uso
+### Y Exemplos de Uso
 ${generateUsageExamples(code, language)}
 
-### ⚠️ Notas e Avisos
+### as i  Notas e Avisos
 ${generateWarningsAndNotes(code, language)}
 
-### 🏷️ Tags e Metadados
+### Yi  Tags e Metadados
 ${generateTagsAndMetadata(code, language)}`;
   };
 
   const generateOptimizationAnalysis = async (code: string, language: string, options: AnalysisOptions) => {
-    return `## ⚡ Análise de Otimização
+    return `## as AnAlise de OtimizaAAo
 
-### 🚀 Melhorias de Performance
+### Ys Melhorias de Performance
 ${generatePerformanceOptimizations(code, language)}
 
-### 💾 Otimizações de Memória
+### Y34 OtimizaAAes de MemA3ria
 ${generateMemoryOptimizations(code, language)}
 
-### 🔄 Refatorações Sugeridas
+### Y RefatoraAAes Sugeridas
 ${generateRefactoringSuggestions(code, language)}
 
-### 📈 Métricas de Melhoria
+### Y MAtricas de Melhoria
 ${generateImprovementMetrics(code, language)}
 
-### 🎯 Próximos Passos
+### YZ  PrA3ximos Passos
 ${generateNextSteps(code, language)}`;
   };
 
   const generateReviewAnalysis = async (code: string, language: string, options: AnalysisOptions) => {
-    return `## 👀 Code Review Completo
+    return `## Y Code Review Completo
 
-### ✅ Pontos Positivos
+### a... Pontos Positivos
 ${identifyPositiveAspects(code, language)}
 
-### ⚠️ Áreas de Melhoria
+### as i  Areas de Melhoria
 ${identifyImprovementAreas(code, language)}
 
-### 🔍 Análise Detalhada
+### Y AnAlise Detalhada
 ${generateDetailedReview(code, language)}
 
-### 📊 Score de Qualidade
+### YS Score de Qualidade
 ${generateQualityScore(code, language)}
 
-### 🎯 Recomendações Finais
+### YZ  RecomendaAAes Finais
 ${generateFinalRecommendations(code, language)}`;
   };
 
   const generateFallbackAnalysis = (code: string, type: FunctionType, language: string, options: AnalysisOptions) => {
     const fallbackAnalyses = {
-      explain: `## 🔍 Explicação do Código ${language}
+      explain: `## Y ExplicaAAo do CA3digo ${language}
 
-Este código implementa uma funcionalidade importante. Aqui está uma análise detalhada:
+Este cA3digo implementa uma funcionalidade importante. Aqui estA uma anAlise detalhada:
 
 ### Estrutura Principal
-- **Início**: Configuração inicial e declaração de variáveis
-- **Meio**: Lógica principal de processamento  
+- **InAcio**: ConfiguraAAo inicial e declaraAAo de variAveis
+- **Meio**: LA3gica principal de processamento  
 - **Fim**: Tratamento de resultados e retorno
 
 ### Funcionamento
-O código executa as seguintes etapas:
-1. Inicializa as variáveis necessárias
+O cA3digo executa as seguintes etapas:
+1. Inicializa as variAveis necessArias
 2. Processa os dados de entrada
-3. Aplica as transformações necessárias
+3. Aplica as transformaAAes necessArias
 4. Retorna o resultado processado
 
 ### Conceitos Importantes
-- Utiliza técnicas modernas de ${language}
+- Utiliza tAcnicas modernas de ${language}
 - Implementa tratamento de erros adequado
-- Segue boas práticas de programação
+- Segue boas prAticas de programaAAo
 
 ### Exemplo de Uso
 \`\`\`${language}
-// Exemplo de como usar este código
+// Exemplo de como usar este cA3digo
 const resultado = minhaFuncao(dadosEntrada);
 console.log(resultado);
 \`\`\``,
 
-      bugs: `## 🐛 Análise de Bugs
+      bugs: `## Y AnAlise de Bugs
 
 ### Problemas Identificados
-1. **Possível Memory Leak**
-   - **Problema**: Variável não está sendo liberada da memória
-   - **Solução**: Adicionar \`delete variableName\` após uso
+1. **PossAvel Memory Leak**
+   - **Problema**: VariAvel nAo estA sendo liberada da memA3ria
+   - **SoluAAo**: Adicionar \`delete variableName\` apA3s uso
 
 2. **Tratamento de Erro Inadequado**
-   - **Problema**: Try-catch muito genérico
-   - **Solução**: Especificar tipos de erro específicos
+   - **Problema**: Try-catch muito genArico
+   - **SoluAAo**: Especificar tipos de erro especAficos
 
-3. **Validação de Entrada Ausente**
-   - **Problema**: Não valida se os parâmetros são válidos
-   - **Solução**: Adicionar validação no início da função
+3. **ValidaAAo de Entrada Ausente**
+   - **Problema**: NAo valida se os parAmetros sAo vAlidos
+   - **SoluAAo**: Adicionar validaAAo no inAcio da funAAo
 
-### 🔧 Correções Sugeridas
+### Y CorreAAes Sugeridas
 \`\`\`${language}
 // ANTES
 function minhaFuncao(param) {
@@ -318,9 +337,9 @@ function minhaFuncao(param) {
 
 // DEPOIS
 function minhaFuncao(param) {
-  // Validação de entrada
+  // ValidaAAo de entrada
   if (!param || typeof param !== 'string') {
-    throw new Error('Parâmetro inválido');
+    throw new Error('ParAmetro invAlido');
   }
   
   try {
@@ -336,39 +355,39 @@ function minhaFuncao(param) {
 }
 \`\`\``,
 
-      docs: `## 📝 Documentação Gerada
+      docs: `## Y DocumentaAAo Gerada
 
-### Descrição da Função
-Esta função processa dados de entrada e retorna um resultado transformado.
+### DescriAAo da FunAAo
+Esta funAAo processa dados de entrada e retorna um resultado transformado.
 
-### 🔧 Parâmetros
+### Y ParAmetros
 - **\`param\`** (string): Dados de entrada para processamento
-- **\`options\`** (object, opcional): Configurações adicionais
+- **\`options\`** (object, opcional): ConfiguraAAes adicionais
 
-### 📤 Retorno
+### Y Retorno
 - **Tipo**: \`Promise<Object>\`
-- **Descrição**: Objeto contendo os dados processados
+- **DescriAAo**: Objeto contendo os dados processados
 
-### 💡 Exemplo de Uso
+### Y Exemplo de Uso
 \`\`\`${language}
-// Uso básico
+// Uso bAsico
 const resultado = await minhaFuncao('dados');
 
-// Com opções
+// Com opAAes
 const resultado = await minhaFuncao('dados', {
   timeout: 5000,
   retries: 3
 });
 \`\`\`
 
-### 🚨 Exceções
-- **\`ValidationError\`**: Quando os parâmetros são inválidos
+### Ys  ExceAAes
+- **\`ValidationError\`**: Quando os parAmetros sAo invAlidos
 - **\`ProcessingError\`**: Quando ocorre erro no processamento
-- **\`TimeoutError\`**: Quando o timeout é excedido`,
+- **\`TimeoutError\`**: Quando o timeout A excedido`,
 
-      optimize: `## ⚡ Otimização de Código
+      optimize: `## as OtimizaAAo de CA3digo
 
-### 🚀 Melhorias de Performance
+### Ys Melhorias de Performance
 
 #### 1. **Cache de Resultados**
 \`\`\`${language}
@@ -407,35 +426,35 @@ const getData = (() => {
 })();
 \`\`\`
 
-### 📈 Métricas de Melhoria
-- **Performance**: +40% mais rápido
-- **Memória**: -25% uso de RAM
-- **Tempo de resposta**: -60% latência`,
+### Y MAtricas de Melhoria
+- **Performance**: +40% mais rApido
+- **MemA3ria**: -25% uso de RAM
+- **Tempo de resposta**: -60% latAancia`,
 
-      review: `## 👀 Code Review Completo
+      review: `## Y Code Review Completo
 
-### ✅ Pontos Positivos
-- **Estrutura clara**: Código bem organizado e legível
-- **Nomenclatura**: Variáveis e funções com nomes descritivos
-- **Modularidade**: Funções com responsabilidades bem definidas
-- **Tratamento de erros**: Implementação adequada de try-catch
+### a... Pontos Positivos
+- **Estrutura clara**: CA3digo bem organizado e legAvel
+- **Nomenclatura**: VariAveis e funAAes com nomes descritivos
+- **Modularidade**: FunAAes com responsabilidades bem definidas
+- **Tratamento de erros**: ImplementaAAo adequada de try-catch
 
-### ⚠️ Pontos de Melhoria
+### as i  Pontos de Melhoria
 
-#### 1. **Segurança**
-- Implementar validação de entrada mais rigorosa
-- Adicionar sanitização de dados
-- Verificar permissões de acesso
+#### 1. **SeguranAa**
+- Implementar validaAAo de entrada mais rigorosa
+- Adicionar sanitizaAAo de dados
+- Verificar permissAes de acesso
 
 #### 2. **Performance**
 - Otimizar loops aninhados
-- Implementar cache para operações custosas
-- Reduzir chamadas desnecessárias à API
+- Implementar cache para operaAAes custosas
+- Reduzir chamadas desnecessArias A  API
 
-### 📊 Score de Qualidade
+### YS Score de Qualidade
 - **Legibilidade**: 8/10
 - **Performance**: 6/10
-- **Segurança**: 7/10
+- **SeguranAa**: 7/10
 - **Manutenibilidade**: 8/10
 - **Score Geral**: 7.25/10`
     };
@@ -443,7 +462,7 @@ const getData = (() => {
     return fallbackAnalyses[type] || fallbackAnalyses.explain;
   };
 
-  // Funções auxiliares
+  // FunAAes auxiliares
   const detectLanguage = (code: string): string => {
     if (code.includes('import React') || code.includes('jsx')) return 'react';
     if (code.includes('def ') || code.includes('import ')) return 'python';
@@ -462,13 +481,13 @@ const getData = (() => {
   };
 
   const calculateConfidence = (code: string, type: FunctionType): number => {
-    // Cálculo simples de confiança baseado no tamanho e tipo
+    // CAlculo simples de confianAa baseado no tamanho e tipo
     const baseConfidence = 0.8;
     const lengthFactor = Math.min(code.length / 1000, 0.2);
     return Math.min(baseConfidence + lengthFactor, 0.95);
   };
 
-  const combineAnalyses = (basic: string, specific: string, rich: any): string => {
+  const combineAnalyses = (basic: string, specific: string, rich: RichContent | null): string => {
     if (specific && specific.trim()) {
       return specific;
     }
@@ -496,12 +515,11 @@ const getData = (() => {
 
   const updateStats = async (processingTime: number) => {
     chrome.storage.local.get(['devmentorStats'], (data) => {
-      const stats = data.devmentorStats || {
+      const stats: AnalysisStats = (data.devmentorStats as AnalysisStats | undefined) ?? {
         totalAnalyses: 0,
         totalTime: 0,
         lastUsed: new Date().toISOString()
       };
-      
       stats.totalAnalyses += 1;
       stats.totalTime += processingTime;
       stats.lastUsed = new Date().toISOString();
@@ -510,59 +528,59 @@ const getData = (() => {
     });
   };
 
-  // Funções de análise específica (implementações básicas)
+  // FunAAes de anAlise especAfica (implementaAAes bAsicas)
   const analyzeCodeStructure = (code: string, language: string) => {
-    return `- **Funções**: ${(code.match(/function|def|const.*=/g) || []).length} funções identificadas
+    return `- **FunAAes**: ${(code.match(/function|def|const.*=/g) || []).length} funAAes identificadas
 - **Classes**: ${(code.match(/class /g) || []).length} classes encontradas
-- **Variáveis**: ${(code.match(/let |const |var /g) || []).length} variáveis declaradas`;
+- **VariAveis**: ${(code.match(/let |const |var /g) || []).length} variAveis declaradas`;
   };
 
   const analyzeExecutionFlow = (code: string, language: string) => {
-    return `1. **Inicialização**: Variáveis e configurações são definidas
-2. **Processamento**: Lógica principal é executada
-3. **Validação**: Dados são verificados e validados
-4. **Retorno**: Resultado é processado e retornado`;
+    return `1. **InicializaAAo**: VariAveis e configuraAAes sAo definidas
+2. **Processamento**: LA3gica principal A executada
+3. **ValidaAAo**: Dados sAo verificados e validados
+4. **Retorno**: Resultado A processado e retornado`;
   };
 
   const extractKeyConcepts = (code: string, language: string) => {
     const concepts = [];
-    if (code.includes('async') || code.includes('await')) concepts.push('Programação Assíncrona');
-    if (code.includes('class ')) concepts.push('Programação Orientada a Objetos');
-    if (code.includes('map(') || code.includes('filter(')) concepts.push('Programação Funcional');
+    if (code.includes('async') || code.includes('await')) concepts.push('ProgramaAAo AssAncrona');
+    if (code.includes('class ')) concepts.push('ProgramaAAo Orientada a Objetos');
+    if (code.includes('map(') || code.includes('filter(')) concepts.push('ProgramaAAo Funcional');
     if (code.includes('try') || code.includes('catch')) concepts.push('Tratamento de Erros');
     
-    return concepts.map(c => `- **${c}**: Conceito importante aplicado no código`).join('\n');
+    return concepts.map(c => `- **${c}**: Conceito importante aplicado no cA3digo`).join('\n');
   };
 
   const generatePracticalExamples = (code: string, language: string) => {
-    return `- **Uso em produção**: Este código pode ser usado em aplicações reais
-- **Integração**: Pode ser integrado com outros sistemas
-- **Escalabilidade**: Adequado para crescimento e manutenção`;
+    return `- **Uso em produAAo**: Este cA3digo pode ser usado em aplicaAAes reais
+- **IntegraAAo**: Pode ser integrado com outros sistemas
+- **Escalabilidade**: Adequado para crescimento e manutenAAo`;
   };
 
   const generateLearningResources = (code: string, language: string) => {
-    return `- **Documentação oficial**: Consulte a documentação do ${language}
-- **Tutoriais**: Procure tutoriais específicos sobre os conceitos utilizados
-- **Comunidade**: Participe de fóruns e comunidades de desenvolvedores`;
+    return `- **DocumentaAAo oficial**: Consulte a documentaAAo do ${language}
+- **Tutoriais**: Procure tutoriais especAficos sobre os conceitos utilizados
+- **Comunidade**: Participe de fA3runs e comunidades de desenvolvedores`;
   };
 
-  // Implementações básicas para outras funções de análise
+  // ImplementaAAes bAsicas para outras funAAes de anAlise
   const identifyBugs = (code: string, language: string) => {
-    return `- **Validação de entrada**: Verificar se parâmetros são válidos
+    return `- **ValidaAAo de entrada**: Verificar se parAmetros sAo vAlidos
 - **Tratamento de erros**: Implementar try-catch adequado
-- **Memory leaks**: Verificar se recursos são liberados corretamente`;
+- **Memory leaks**: Verificar se recursos sAo liberados corretamente`;
   };
 
   const generateBugFixes = (code: string, language: string) => {
-    return `- Adicionar validação de entrada no início das funções
-- Implementar tratamento de erros específico
+    return `- Adicionar validaAAo de entrada no inAcio das funAAes
+- Implementar tratamento de erros especAfico
 - Adicionar logs para debugging`;
   };
 
   const generatePreventionTips = (code: string, language: string) => {
     return `- Use TypeScript para type safety
-- Implemente testes unitários
-- Siga padrões de codificação`;
+- Implemente testes unitArios
+- Siga padrAes de codificaAAo`;
   };
 
   const generateTestSuggestions = (code: string, language: string) => {
@@ -572,53 +590,53 @@ const getData = (() => {
   };
 
   const generateQualityMetrics = (code: string, language: string) => {
-    return `- **Complexidade ciclomática**: Moderada
+    return `- **Complexidade ciclomAtica**: Moderada
 - **Cobertura de testes**: Recomendada 80%+
 - **Manutenibilidade**: Boa`;
   };
 
-  // Implementações para documentação
+  // ImplementaAAes para documentaAAo
   const generateGeneralDescription = (code: string, language: string) => {
-    return `Esta função implementa funcionalidades específicas em ${language}.`;
+    return `Esta funAAo implementa funcionalidades especAficas em ${language}.`;
   };
 
   const generateFunctionDocumentation = (code: string, language: string) => {
     return `\`\`\`${language}
 /**
- * Descrição da função
- * @param {type} param - Descrição do parâmetro
- * @returns {type} Descrição do retorno
+ * DescriAAo da funAAo
+ * @param {type} param - DescriAAo do parAmetro
+ * @returns {type} DescriAAo do retorno
  */
 \`\`\``;
   };
 
   const generateParameterDocumentation = (code: string, language: string) => {
-    return `- **param1**: Tipo e descrição
-- **param2**: Tipo e descrição (opcional)`;
+    return `- **param1**: Tipo e descriAAo
+- **param2**: Tipo e descriAAo (opcional)`;
   };
 
   const generateUsageExamples = (code: string, language: string) => {
     return `\`\`\`${language}
-// Exemplo básico
+// Exemplo bAsico
 const result = minhaFuncao(param);
 
-// Exemplo avançado
+// Exemplo avanAado
 const result = minhaFuncao(param, { option: true });
 \`\`\``;
   };
 
   const generateWarningsAndNotes = (code: string, language: string) => {
-    return `- ⚠️ **Atenção**: Verificar parâmetros antes do uso
-- 📝 **Nota**: Esta função pode lançar exceções`;
+    return `- as i  **AtenAAo**: Verificar parAmetros antes do uso
+- Y **Nota**: Esta funAAo pode lanAar exceAAes`;
   };
 
   const generateTagsAndMetadata = (code: string, language: string) => {
-    return `- **Versão**: 1.0.0
+    return `- **VersAo**: 1.0.0
 - **Autor**: DevMentor AI
-- **Licença**: MIT`;
+- **LicenAa**: MIT`;
   };
 
-  // Implementações para otimização
+  // ImplementaAAes para otimizaAAo
   const generatePerformanceOptimizations = (code: string, language: string) => {
     return `- **Cache**: Implementar cache para resultados custosos
 - **Lazy Loading**: Carregar dados sob demanda
@@ -626,62 +644,62 @@ const result = minhaFuncao(param, { option: true });
   };
 
   const generateMemoryOptimizations = (code: string, language: string) => {
-    return `- **Garbage Collection**: Liberar recursos não utilizados
-- **Weak References**: Usar referências fracas quando apropriado
-- **Pool de Objetos**: Reutilizar objetos quando possível`;
+    return `- **Garbage Collection**: Liberar recursos nAo utilizados
+- **Weak References**: Usar referAancias fracas quando apropriado
+- **Pool de Objetos**: Reutilizar objetos quando possAvel`;
   };
 
   const generateRefactoringSuggestions = (code: string, language: string) => {
-    return `- **Extração de funções**: Quebrar funções grandes
-- **Padrões de design**: Aplicar padrões apropriados
-- **Modernização**: Usar recursos modernos da linguagem`;
+    return `- **ExtraAAo de funAAes**: Quebrar funAAes grandes
+- **PadrAes de design**: Aplicar padrAes apropriados
+- **ModernizaAAo**: Usar recursos modernos da linguagem`;
   };
 
   const generateImprovementMetrics = (code: string, language: string) => {
-    return `- **Performance**: +30% mais rápido
-- **Memória**: -20% uso de RAM
+    return `- **Performance**: +30% mais rApido
+- **MemA3ria**: -20% uso de RAM
 - **Legibilidade**: +40% mais claro`;
   };
 
   const generateNextSteps = (code: string, language: string) => {
     return `1. Implementar cache inteligente
 2. Adicionar testes automatizados
-3. Monitorar performance em produção`;
+3. Monitorar performance em produAAo`;
   };
 
-  // Implementações para review
+  // ImplementaAAes para review
   const identifyPositiveAspects = (code: string, language: string) => {
-    return `- **Estrutura clara**: Código bem organizado
+    return `- **Estrutura clara**: CA3digo bem organizado
 - **Nomenclatura**: Nomes descritivos
-- **Modularidade**: Funções com responsabilidades definidas`;
+- **Modularidade**: FunAAes com responsabilidades definidas`;
   };
 
   const identifyImprovementAreas = (code: string, language: string) => {
-    return `- **Validação**: Adicionar mais validações
-- **Testes**: Implementar testes unitários
-- **Documentação**: Melhorar comentários`;
+    return `- **ValidaAAo**: Adicionar mais validaAAes
+- **Testes**: Implementar testes unitArios
+- **DocumentaAAo**: Melhorar comentArios`;
   };
 
   const generateDetailedReview = (code: string, language: string) => {
-    return `### Análise por Seção
-- **Inicialização**: Bem implementada
-- **Processamento**: Lógica clara
-- **Finalização**: Tratamento adequado`;
+    return `### AnAlise por SeAAo
+- **InicializaAAo**: Bem implementada
+- **Processamento**: LA3gica clara
+- **FinalizaAAo**: Tratamento adequado`;
   };
 
   const generateQualityScore = (code: string, language: string) => {
     return `- **Legibilidade**: 8/10
 - **Performance**: 7/10
-- **Segurança**: 6/10
+- **SeguranAa**: 6/10
 - **Manutenibilidade**: 8/10
 - **Score Geral**: 7.25/10`;
   };
 
   const generateFinalRecommendations = (code: string, language: string) => {
     return `1. Implementar testes automatizados
-2. Adicionar validação de entrada
-3. Melhorar documentação
-4. Considerar refatoração para melhor performance`;
+2. Adicionar validaAAo de entrada
+3. Melhorar documentaAAo
+4. Considerar refatoraAAo para melhor performance`;
   };
 
   const clearResult = useCallback(() => {
@@ -689,22 +707,26 @@ const result = minhaFuncao(param, { option: true });
     setError(null);
   }, []);
 
-  const getAnalysisHistory = useCallback(async (): Promise<any[]> => {
+  const getAnalysisHistory = useCallback(async (): Promise<AnalysisHistoryItem[]> => {
     return new Promise((resolve) => {
       chrome.storage.local.get(['devmentorHistory'], (result) => {
-        resolve(result.devmentorHistory || []);
+        const history = result.devmentorHistory as AnalysisHistoryItem[] | undefined;
+        resolve(history ?? []);
       });
     });
   }, []);
 
-  const getStats = useCallback(async () => {
+  const getStats = useCallback(async (): Promise<AnalysisStats> => {
     return new Promise((resolve) => {
       chrome.storage.local.get(['devmentorStats'], (result) => {
-        resolve(result.devmentorStats || {
-          totalAnalyses: 0,
-          totalTime: 0,
-          lastUsed: 'Nunca'
-        });
+        const stats = result.devmentorStats as AnalysisStats | undefined;
+        resolve(
+          stats ?? {
+            totalAnalyses: 0,
+            totalTime: 0,
+            lastUsed: 'Nunca'
+          }
+        );
       });
     });
   }, []);
@@ -715,7 +737,7 @@ const result = minhaFuncao(param, { option: true });
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tabs[0]?.id) return;
 
-      // Injetar content script se necessário
+      // Injetar content script se necessArio
       await chrome.scripting.executeScript({
         target: { tabId: tabs[0].id },
         files: ['content/content-script.js']
@@ -744,3 +766,7 @@ const result = minhaFuncao(param, { option: true });
     getStats
   };
 };
+
+
+
+

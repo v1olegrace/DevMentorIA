@@ -1,5 +1,6 @@
+/* global window, document, setTimeout, clearTimeout */
+/* eslint-disable no-console */
 /**
- * DevMentor AI - Content Injection Script
  * This file is web-accessible and can be injected into pages
  */
 
@@ -9,7 +10,7 @@ console.log('[DevMentor AI] Content injection script loaded');
 // Export functions that can be used by content scripts
 window.DevMentorInject = {
   // Inject analysis sidebar
-  injectSidebar: function(analysis, type, metadata) {
+  injectSidebar: function (analysis, type, metadata) {
     console.log('[DevMentor AI] Injecting sidebar with analysis:', type);
 
     // Remove existing sidebar if present
@@ -34,7 +35,7 @@ window.DevMentorInject = {
       overflow-y: auto;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
-    
+
     // Create header
     const header = document.createElement('div');
     header.style.cssText = `
@@ -85,39 +86,34 @@ window.DevMentorInject = {
       metadataBlock.appendChild(confDiv);
       content.appendChild(metadataBlock);
     }
-    
+
     // Assemble sidebar
     sidebar.appendChild(header);
     sidebar.appendChild(content);
-    
+
     // Add to page
     document.body.appendChild(sidebar);
-    
+
     // Add close functionality
     const closeBtn = sidebar.querySelector('#devmentor-close');
-    let autoCloseTimer;
+    const autoCloseTimer = setTimeout(() => {
+      if (document.body.contains(sidebar)) {
+        sidebar.remove();
+      }
+    }, 30000);
 
     const closeSidebar = () => {
       sidebar.remove();
-      if (autoCloseTimer) {
-        clearTimeout(autoCloseTimer);
-      }
+      clearTimeout(autoCloseTimer);
     };
 
     closeBtn.addEventListener('click', () => {
       closeSidebar();
     });
-
-    // Auto-close after 30 seconds
-    autoCloseTimer = setTimeout(() => {
-      if (document.body.contains(sidebar)) {
-        sidebar.remove();
-      }
-    }, 30000);
   },
-  
+
   // Remove sidebar
-  removeSidebar: function() {
+  removeSidebar: function () {
     const sidebar = document.getElementById('devmentor-sidebar');
     if (sidebar) {
       sidebar.remove();
@@ -126,14 +122,3 @@ window.DevMentorInject = {
 };
 
 console.log('[DevMentor AI] ✅ Injection functions ready');
-
-
-
-
-
-
-
-
-
-
-

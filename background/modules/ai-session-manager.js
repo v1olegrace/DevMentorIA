@@ -1,265 +1,92 @@
 /**
- * DevMentor AI - AI Session Manager (ES6 Module)
- * Manages AI sessions using persistent storage instead of in-memory Maps
- * Follows official Chrome Extensions documentation for state persistence
+ * Minimal AI session manager backed by chrome.storage.local
+ * Stores per-user session metadata and exposes the subset of methods
+ * consumed by the service worker.
  */
 
+/* eslint-disable no-console, security/detect-object-injection */
+
+const STORAGE_KEY = 'aiSessions';
+const SESSION_TIMEOUT = 1000 * 60 * 30; // 30 minutes
+
 export class AISessionManager {
-  constructor() {
-    this.storageKey = 'aiSessions';
-    this.isInitialized = false;
+  constructor () {
+    this.initialized = false;
   }
 
-  async initialize() {
-    if (this.isInitialized) {
+  async initialize () {
+    if (this.initialized) {
       return;
     }
 
-    try {
-      // Clean up expired sessions on initialization
-      await this.cleanupExpiredSessions();
-      this.isInitialized = true;
-      console.log('[AISessionManager] ✅ Initialized successfully');
-    } catch (error) {
-      console.error('[AISessionManager] ❌ Initialization failed:', error);
-      throw error;
-    }
+    await this.cleanupExpiredSessions();
+    this.initialized = true;
+    console.info('[AISessionManager] Initialized');
   }
 
-  async initializeSession(userId) {
-    try {
-      // Read from persistent storage instead of global Map
-      const result = await chrome.storage.local.get([this.storageKey]);
-      const sessions = result[this.storageKey] || {};
+  async startSession (userId) {
+    const sessions = await this.#readSessions();
+    const session = sessions[userId] ?? {
+      id: userId,
+      startTime: Date.now(),
+      lastActivity: Date.now(),
+      requestCount: 0,
+      status: 'active'
+    };
 
-      // Check and update the session
-      if (!sessions[userId]) {
-        sessions[userId] = {
-          id: userId,
-          startTime: Date.now(),
-          requestCount: 0,
-          lastActivity: Date.now(),
-          status: 'active'
-        };
-      } else {
-        sessions[userId].requestCount++;
-        sessions[userId].lastActivity = Date.now();
-        sessions[userId].status = 'active';
+    session.lastActivity = Date.now();
+    session.requestCount += 1;
+    sessions[userId] = session;
+
+    await chrome.storage.local.set({ [STORAGE_KEY]: sessions });
+    return session;
+  }
+
+  async endSession (userId) {
+    const sessions = await this.#readSessions();
+    if (!sessions[userId]) return;
+
+    sessions[userId].status = 'ended';
+    sessions[userId].endedAt = Date.now();
+    await chrome.storage.local.set({ [STORAGE_KEY]: sessions });
+  }
+
+  async cleanupExpiredSessions () {
+    const sessions = await this.#readSessions();
+    const threshold = Date.now() - SESSION_TIMEOUT;
+    let modified = false;
+
+    for (const session of Object.values(sessions)) {
+      if (session.status === 'ended') continue;
+      if ((session.lastActivity ?? 0) < threshold) {
+        session.status = 'expired';
+        session.endedAt = Date.now();
+        modified = true;
       }
+    }
 
-      // Save the updated sessions back to persistent storage
-      await chrome.storage.local.set({ [this.storageKey]: sessions });
-      
-      console.log(`[AISessionManager] Session initialized for user: ${userId}`);
-      return sessions[userId];
-      
-    } catch (error) {
-      console.error('[AISessionManager] Failed to initialize session:', error);
-      throw error;
+    if (modified) {
+      await chrome.storage.local.set({ [STORAGE_KEY]: sessions });
+      console.info('[AISessionManager] Expired sessions cleaned up');
     }
   }
 
-  async getSession(userId) {
-    try {
-      const result = await chrome.storage.local.get([this.storageKey]);
-      const sessions = result[this.storageKey] || {};
-      return sessions[userId] || null;
-    } catch (error) {
-      console.error('[AISessionManager] Failed to get session:', error);
-      return null;
-    }
+  async getMetrics () {
+    const sessions = await this.#readSessions();
+    const values = Object.values(sessions);
+    const active = values.filter(session => session.status === 'active');
+
+    return {
+      totalSessions: values.length,
+      activeSessions: active.length,
+      lastCleanup: Date.now()
+    };
   }
 
-  async updateSession(userId, updates) {
-    try {
-      const result = await chrome.storage.local.get([this.storageKey]);
-      const sessions = result[this.storageKey] || {};
-
-      if (sessions[userId]) {
-        sessions[userId] = {
-          ...sessions[userId],
-          ...updates,
-          lastActivity: Date.now()
-        };
-
-        await chrome.storage.local.set({ [this.storageKey]: sessions });
-        console.log(`[AISessionManager] Session updated for user: ${userId}`);
-      }
-    } catch (error) {
-      console.error('[AISessionManager] Failed to update session:', error);
-      throw error;
-    }
-  }
-
-  async endSession(userId) {
-    try {
-      const result = await chrome.storage.local.get([this.storageKey]);
-      const sessions = result[this.storageKey] || {};
-
-      if (sessions[userId]) {
-        sessions[userId].status = 'ended';
-        sessions[userId].endTime = Date.now();
-        sessions[userId].lastActivity = Date.now();
-
-        await chrome.storage.local.set({ [this.storageKey]: sessions });
-        console.log(`[AISessionManager] Session ended for user: ${userId}`);
-      }
-    } catch (error) {
-      console.error('[AISessionManager] Failed to end session:', error);
-      throw error;
-    }
-  }
-
-  async cleanupExpiredSessions() {
-    try {
-      const result = await chrome.storage.local.get([this.storageKey]);
-      const sessions = result[this.storageKey] || {};
-      
-      const now = Date.now();
-      const oneHourAgo = now - (60 * 60 * 1000); // 1 hour
-      const oneDayAgo = now - (24 * 60 * 60 * 1000); // 1 day
-      
-      let cleanedCount = 0;
-      
-      for (const [userId, session] of Object.entries(sessions)) {
-        // Remove sessions that haven't been active for 1 hour
-        if (session.lastActivity < oneHourAgo) {
-          delete sessions[userId];
-          cleanedCount++;
-        }
-        // Mark old sessions as inactive
-        else if (session.lastActivity < oneDayAgo && session.status === 'active') {
-          sessions[userId].status = 'inactive';
-        }
-      }
-      
-      if (cleanedCount > 0) {
-        await chrome.storage.local.set({ [this.storageKey]: sessions });
-        console.log(`[AISessionManager] Cleaned up ${cleanedCount} expired sessions`);
-      }
-      
-    } catch (error) {
-      console.error('[AISessionManager] Failed to cleanup expired sessions:', error);
-    }
-  }
-
-  async getAllSessions() {
-    try {
-      const result = await chrome.storage.local.get([this.storageKey]);
-      return result[this.storageKey] || {};
-    } catch (error) {
-      console.error('[AISessionManager] Failed to get all sessions:', error);
-      return {};
-    }
-  }
-
-  async getActiveSessions() {
-    try {
-      const sessions = await this.getAllSessions();
-      const activeSessions = {};
-      
-      for (const [userId, session] of Object.entries(sessions)) {
-        if (session.status === 'active') {
-          activeSessions[userId] = session;
-        }
-      }
-      
-      return activeSessions;
-    } catch (error) {
-      console.error('[AISessionManager] Failed to get active sessions:', error);
-      return {};
-    }
-  }
-
-  async getSessionStats() {
-    try {
-      const sessions = await this.getAllSessions();
-      const stats = {
-        total: 0,
-        active: 0,
-        inactive: 0,
-        ended: 0,
-        totalRequests: 0
-      };
-      
-      for (const session of Object.values(sessions)) {
-        stats.total++;
-        stats.totalRequests += session.requestCount || 0;
-        
-        switch (session.status) {
-          case 'active':
-            stats.active++;
-            break;
-          case 'inactive':
-            stats.inactive++;
-            break;
-          case 'ended':
-            stats.ended++;
-            break;
-        }
-      }
-      
-      return stats;
-    } catch (error) {
-      console.error('[AISessionManager] Failed to get session stats:', error);
-      return {
-        total: 0,
-        active: 0,
-        inactive: 0,
-        ended: 0,
-        totalRequests: 0
-      };
-    }
-  }
-
-  async clearAllSessions() {
-    try {
-      await chrome.storage.local.remove([this.storageKey]);
-      console.log('[AISessionManager] All sessions cleared');
-    } catch (error) {
-      console.error('[AISessionManager] Failed to clear all sessions:', error);
-      throw error;
-    }
-  }
-
-  // Utility method to check if a session exists
-  async hasSession(userId) {
-    const session = await this.getSession(userId);
-    return session !== null;
-  }
-
-  // Utility method to get session age
-  getSessionAge(session) {
-    if (!session || !session.startTime) {
-      return 0;
-    }
-    return Date.now() - session.startTime;
-  }
-
-  // Utility method to check if session is expired
-  isSessionExpired(session, maxAgeMinutes = 60) {
-    if (!session || !session.lastActivity) {
-      return true;
-    }
-    const maxAge = maxAgeMinutes * 60 * 1000; // Convert to milliseconds
-    return (Date.now() - session.lastActivity) > maxAge;
+  async #readSessions () {
+    const data = await chrome.storage.local.get(STORAGE_KEY);
+    return data[STORAGE_KEY] ?? {};
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+export default AISessionManager;

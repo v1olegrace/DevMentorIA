@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -47,10 +47,11 @@ export const useAuth = () => {
 
       toast.success("Conta criada com sucesso!");
       return { data, error: null };
-    } catch (error: any) {
-      console.error("Erro no signup:", error);
-      toast.error(error.message || "Erro ao criar conta");
-      return { data: null, error };
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error("Erro ao criar conta");
+      console.error("Erro no signup:", err);
+      toast.error(err.message || "Erro ao criar conta");
+      return { data: null, error: err };
     }
   };
 
@@ -65,10 +66,11 @@ export const useAuth = () => {
 
       toast.success("Login realizado com sucesso!");
       return { data, error: null };
-    } catch (error: any) {
-      console.error("Erro no signin:", error);
-      toast.error(error.message || "Erro ao fazer login");
-      return { data: null, error };
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error("Erro ao fazer login");
+      console.error("Erro no signin:", err);
+      toast.error(err.message || "Erro ao fazer login");
+      return { data: null, error: err };
     }
   };
 
@@ -79,10 +81,11 @@ export const useAuth = () => {
 
       toast.success("Logout realizado com sucesso!");
       return { error: null };
-    } catch (error: any) {
-      console.error("Erro no signout:", error);
-      toast.error(error.message || "Erro ao fazer logout");
-      return { error };
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error("Erro ao fazer logout");
+      console.error("Erro no signout:", err);
+      toast.error(err.message || "Erro ao fazer logout");
+      return { error: err };
     }
   };
 
@@ -95,3 +98,4 @@ export const useAuth = () => {
     signOut,
   };
 };
+

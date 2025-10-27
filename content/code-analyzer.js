@@ -1,3 +1,5 @@
+/* global ai */
+/* eslint-disable no-console, security/detect-object-injection */
 /**
  * DevMentor AI - Secure Code Analyzer
  * Enterprise-grade code analysis with secure backend proxy
@@ -5,7 +7,7 @@
  */
 
 class CodeAnalyzer {
-  constructor() {
+  constructor () {
     // SECURITY: No API keys stored in client code
     this.backendEndpoint = '/api/proxy/analyze'; // Backend proxy endpoint
     this.cache = new Map();
@@ -16,11 +18,11 @@ class CodeAnalyzer {
       warn: (...args) => console.warn(...args),
       error: (...args) => console.error(...args)
     };
-    
+
     this.initialize();
   }
 
-  async initialize() {
+  async initialize () {
     try {
       // SECURITY: No API keys stored in client
       // All AI requests go through secure backend proxy
@@ -30,7 +32,7 @@ class CodeAnalyzer {
     }
   }
 
-  async analyzeCode(code, analysisType = 'explain', options = {}) {
+  async analyzeCode (code, analysisType = 'explain', options = {}) {
     try {
       // Validate input
       if (!code || code.trim().length === 0) {
@@ -46,22 +48,21 @@ class CodeAnalyzer {
 
       // Detect language
       const language = window.LanguageDetector?.detect(code)?.language || 'javascript';
-      
+
       // Determine analysis strategy based on availability
       const analysisStrategy = await this.determineAnalysisStrategy(options);
-      
+
       let result;
       if (analysisStrategy === 'offline') {
         result = await this.performOfflineAnalysis(code, analysisType, language, options);
       } else {
         result = await this.performOnlineAnalysis(code, analysisType, language, options);
       }
-      
+
       // Cache result
       this.cacheResult(cacheKey, result);
-      
+
       return result;
-      
     } catch (error) {
       this.logger.error('[CodeAnalyzer] Analysis error:', error);
       return this.getFallbackResponse(code, analysisType, error.message);
@@ -71,28 +72,28 @@ class CodeAnalyzer {
   /**
    * Determine analysis strategy based on availability and options
    */
-  async determineAnalysisStrategy(options) {
+  async determineAnalysisStrategy (options) {
     // Check if offline analysis is explicitly requested
     if (options.forceOffline === true) {
       return 'offline';
     }
-    
+
     // Check if online analysis is explicitly requested
     if (options.forceOnline === true) {
       return 'online';
     }
-    
+
     // Check network availability
     if (!navigator.onLine) {
       this.logger.info('[CodeAnalyzer] Offline mode - network unavailable');
       return 'offline';
     }
-    
+
     // Check if backend proxy is available
     try {
-      const response = await fetch('/api/proxy/health', { 
+      const response = await fetch('/api/proxy/health', {
         method: 'GET',
-        timeout: 5000 
+        timeout: 5000
       });
       if (response.ok) {
         this.logger.info('[CodeAnalyzer] Online mode - backend proxy available');
@@ -101,7 +102,7 @@ class CodeAnalyzer {
     } catch (error) {
       this.logger.warn('[CodeAnalyzer] Backend proxy unavailable, falling back to offline');
     }
-    
+
     // Default to offline analysis
     return 'offline';
   }
@@ -109,9 +110,9 @@ class CodeAnalyzer {
   /**
    * Perform offline analysis using local AI capabilities
    */
-  async performOfflineAnalysis(code, analysisType, language, options) {
+  async performOfflineAnalysis (code, analysisType, language, options) {
     this.logger.info('[CodeAnalyzer] Performing offline analysis');
-    
+
     // Use Chrome's built-in AI if available
     if (typeof ai !== 'undefined' && ai.prompt) {
       try {
@@ -119,9 +120,9 @@ class CodeAnalyzer {
         const session = await ai.prompt.create({
           systemPrompt: this.getSystemPrompt(analysisType, language)
         });
-        
+
         const response = await session.prompt(prompt);
-        
+
         return {
           success: true,
           result: response,
@@ -139,7 +140,7 @@ class CodeAnalyzer {
         this.logger.warn('[CodeAnalyzer] Chrome AI unavailable:', error);
       }
     }
-    
+
     // Fallback to local analysis engine
     return await this.performLocalAnalysis(code, analysisType, language, options);
   }
@@ -147,11 +148,11 @@ class CodeAnalyzer {
   /**
    * Perform online analysis using backend proxy
    */
-  async performOnlineAnalysis(code, analysisType, language, options) {
+  async performOnlineAnalysis (code, analysisType, language, options) {
     this.logger.info('[CodeAnalyzer] Performing online analysis via backend proxy');
-    
+
     const prompt = this.generatePrompt(code, analysisType, language, options);
-    
+
     // Call secure backend proxy
     const response = await fetch(this.backendEndpoint, {
       method: 'POST',
@@ -166,13 +167,13 @@ class CodeAnalyzer {
         prompt
       })
     });
-    
+
     if (!response.ok) {
       throw new Error(`Backend proxy error: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    
+
     return {
       success: true,
       result: result.result,
@@ -191,18 +192,18 @@ class CodeAnalyzer {
   /**
    * Perform local analysis using local analysis engine
    */
-  async performLocalAnalysis(code, analysisType, language, options) {
+  async performLocalAnalysis (code, analysisType, language, options) {
     this.logger.info('[CodeAnalyzer] Performing local analysis');
-    
+
     // Use local analysis engine if available
     if (typeof window !== 'undefined' && window.LocalAnalysisEngine) {
       try {
         const engine = new window.LocalAnalysisEngine();
         const result = await engine.analyze(code, analysisType, language, options);
-        
+
         return {
           success: true,
-          result: result,
+          result,
           type: analysisType,
           mode: 'local',
           timestamp: Date.now(),
@@ -217,12 +218,12 @@ class CodeAnalyzer {
         this.logger.warn('[CodeAnalyzer] Local analysis engine unavailable:', error);
       }
     }
-    
+
     // Final fallback - basic analysis
     return this.performBasicAnalysis(code, analysisType, language, options);
   }
 
-  generatePrompt(code, analysisType, language, options = {}) {
+  generatePrompt (code, analysisType, language, options = {}) {
     const basePrompts = {
       explain: `You are DevMentor AI, an expert coding assistant. Explain this ${language} code in a clear, educational way. Focus on:
 1. What the code does
@@ -283,7 +284,7 @@ Generate professional documentation in JSDoc format.`
     };
 
     let prompt = basePrompts[analysisType] || basePrompts.explain;
-    
+
     // Add detail level
     if (options.detailLevel === 'beginner') {
       prompt += '\n\nExplain in simple terms suitable for beginners.';
@@ -300,7 +301,7 @@ Generate professional documentation in JSDoc format.`
    * @param {object} options - Opções de análise
    * @returns {Promise<string>} Resposta da IA
    */
-  async callBackendProxy(prompt, options = {}) {
+  async callBackendProxy (prompt, options = {}) {
     try {
       // SECURITY: All AI requests go through secure backend proxy
       const response = await fetch(this.backendEndpoint, {
@@ -310,7 +311,7 @@ Generate professional documentation in JSDoc format.`
           'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({
-          prompt: prompt,
+          prompt,
           analysisType: options.analysisType || 'explain',
           language: options.language || 'javascript',
           options: {
@@ -328,18 +329,17 @@ Generate professional documentation in JSDoc format.`
 
       const data = await response.json();
       return data.analysis;
-      
     } catch (error) {
       this.logger.error('[CodeAnalyzer] Backend proxy call failed:', error);
       throw error;
     }
   }
 
-  processAIResponse(aiResponse, analysisType, originalCode) {
+  processAIResponse (aiResponse, analysisType, originalCode) {
     return {
       type: analysisType,
       analysis: aiResponse,
-      originalCode: originalCode,
+      originalCode,
       timestamp: new Date().toISOString(),
       provider: 'secure-backend-proxy',
       metadata: {
@@ -350,7 +350,7 @@ Generate professional documentation in JSDoc format.`
     };
   }
 
-  getFallbackResponse(code, analysisType, errorMessage) {
+  getFallbackResponse (code, analysisType, errorMessage) {
     const fallbackResponses = {
       explain: `I apologize, but I'm unable to analyze this code right now due to: ${errorMessage}\n\nHowever, I can see this is ${code.split('\n').length} lines of code. Please check your backend configuration.`,
       debug: `I'm currently unable to debug this code due to: ${errorMessage}\n\nPlease ensure the backend service is running correctly.`,
@@ -373,12 +373,12 @@ Generate professional documentation in JSDoc format.`
     };
   }
 
-  getCacheKey(code, analysisType) {
+  getCacheKey (code, analysisType) {
     const hash = this.simpleHash(code + analysisType);
     return `${analysisType}_${hash}`;
   }
 
-  simpleHash(str) {
+  simpleHash (str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
@@ -388,7 +388,7 @@ Generate professional documentation in JSDoc format.`
     return Math.abs(hash).toString(36);
   }
 
-  cacheResult(key, result) {
+  cacheResult (key, result) {
     if (this.cache.size >= this.maxCacheSize) {
       // Remove oldest entry
       const firstKey = this.cache.keys().next().value;
@@ -401,9 +401,9 @@ Generate professional documentation in JSDoc format.`
    * Testa conexão com o backend proxy
    * @returns {Promise<object>} Resultado do teste
    */
-  async testConnection() {
+  async testConnection () {
     try {
-      const testPrompt = "Say 'Hello, DevMentor AI is working!'";
+      const testPrompt = 'Say \'Hello, DevMentor AI is working!\'';
       const response = await this.callBackendProxy(testPrompt);
       return { success: true, response };
     } catch (error) {
@@ -412,7 +412,7 @@ Generate professional documentation in JSDoc format.`
   }
 
   // Legacy method for compatibility
-  quickAnalyze(code, filename = '') {
+  quickAnalyze (code, filename = '') {
     const sanitized = window.DevMentorHelpers?.sanitizeCode(code) || { code: '', isValid: false };
     const looksLikeCode = !!sanitized.isValid;
 
@@ -431,7 +431,7 @@ Generate professional documentation in JSDoc format.`
     };
   }
 
-  getStats(code) {
+  getStats (code) {
     if (!code) return { lines: 0, chars: 0 };
     return {
       lines: code.split('\n').length,
@@ -441,7 +441,3 @@ Generate professional documentation in JSDoc format.`
 }
 
 window.CodeAnalyzer = CodeAnalyzer;
-
-
-
-

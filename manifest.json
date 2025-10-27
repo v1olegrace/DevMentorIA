@@ -14,13 +14,18 @@
   
   "host_permissions": [
     "https://github.com/*",
+    "https://api.github.com/*",
     "https://stackoverflow.com/*",
+    "https://api.stackexchange.com/*",
     "https://developer.mozilla.org/*",
     "https://gitlab.com/*",
     "https://bitbucket.org/*",
     "https://codepen.io/*",
     "https://jsfiddle.net/*",
-    "https://codesandbox.io/*"
+    "https://codesandbox.io/*",
+    "https://registry.npmjs.org/*",
+    "https://api.npmjs.org/*",
+    "https://pypi.org/*"
   ],
   
   "background": {
@@ -29,7 +34,7 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:;"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https:;"
   },
 
   "minimum_chrome_version": "88",
@@ -62,6 +67,13 @@
         "mac": "Command+Shift+R"
       },
       "description": "Refactor selected code"
+    },
+    "open-privacy-dashboard": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P",
+        "mac": "Command+Shift+P"
+      },
+      "description": "Open Privacy Dashboard"
     }
   },
   
@@ -95,6 +107,8 @@
     }
   ],
 
+  "devtools_page": "devtools/devtools.html",
+
   "web_accessible_resources": [
     {
       "resources": [
@@ -102,7 +116,9 @@
         "utils/*",
         "assets/*",
         "examples/*",
+        "devtools/*",
         "popup.html",
+        "popup/privacy-dashboard.html",
         "options.html",
         "style.css"
       ],

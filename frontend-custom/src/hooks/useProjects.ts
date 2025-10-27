@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -32,9 +32,10 @@ export const useProjects = (userId: string | undefined) => {
       if (error) throw error;
 
       setProjects(data || []);
-    } catch (error: any) {
-      console.error('Erro ao buscar projetos:', error);
-      toast.error('Erro ao carregar projetos');
+    } catch (error: unknown) {
+      const message = 'Erro ao carregar projetos';
+      console.error(message, error);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,7 @@ export const useProjects = (userId: string | undefined) => {
   }, [fetchProjects]);
 
   const createProject = async (name: string, description?: string, isPublic: boolean = false) => {
-    if (!userId) return { data: null, error: new Error('Usuário não autenticado') };
+    if (!userId) return { data: null, error: new Error('Usuario nao autenticado') };
 
     try {
       const { data, error } = await supabase
@@ -64,10 +65,11 @@ export const useProjects = (userId: string | undefined) => {
       toast.success('Projeto criado com sucesso!');
       await fetchProjects();
       return { data, error: null };
-    } catch (error: any) {
-      console.error('Erro ao criar projeto:', error);
-      toast.error('Erro ao criar projeto');
-      return { data: null, error };
+    } catch (error: unknown) {
+      const message = 'Erro ao criar projeto';
+      console.error(message, error);
+      toast.error(message);
+      return { data: null, error: error instanceof Error ? error : new Error(message) };
     }
   };
 
@@ -85,10 +87,11 @@ export const useProjects = (userId: string | undefined) => {
       toast.success('Projeto atualizado!');
       await fetchProjects();
       return { data, error: null };
-    } catch (error: any) {
-      console.error('Erro ao atualizar projeto:', error);
-      toast.error('Erro ao atualizar projeto');
-      return { data: null, error };
+    } catch (error: unknown) {
+      const message = 'Erro ao atualizar projeto';
+      console.error(message, error);
+      toast.error(message);
+      return { data: null, error: error instanceof Error ? error : new Error(message) };
     }
   };
 
@@ -104,10 +107,11 @@ export const useProjects = (userId: string | undefined) => {
       toast.success('Projeto removido!');
       await fetchProjects();
       return { error: null };
-    } catch (error: any) {
-      console.error('Erro ao deletar projeto:', error);
-      toast.error('Erro ao remover projeto');
-      return { error };
+    } catch (error: unknown) {
+      const message = 'Erro ao remover projeto';
+      console.error(message, error);
+      toast.error(message);
+      return { error: error instanceof Error ? error : new Error(message) };
     }
   };
 
@@ -120,3 +124,4 @@ export const useProjects = (userId: string | undefined) => {
     refetch: fetchProjects
   };
 };
+
