@@ -21,6 +21,16 @@ Key traits:
 - Educational focus. Storytelling and gamification systems reinforce explanations, turning raw analysis into guided learning.
 - Integration aware. GitHub, StackOverflow, MDN, and package registry data can be pulled on demand with user-provided tokens.
 
+### A brief poetic portrait
+
+In the hush of a late sprint, DevMentor AI keeps watch. It reads the pull requests with you, translating complexity into guidance without sending a byte beyond your desk.
+- It turns unfamiliar snippets into focused explanations tailored to the problem on screen.
+- It warns about brittle edges, from unhandled branches to dependencies that may fail under load.
+- It sketches the documentation and refactors you will need when the next sprint arrives.
+- It spins stories so the concepts stay learned, and tracks progress to welcome you back.
+- It does all of this inside the browser alone, honoring the privacy of your code.
+
+
 ---
 
 ## 2. Capabilities
