@@ -215,13 +215,26 @@ Development tips:
 
 ---
 
-## 11. License
+## 11. Scalability outlook
+
+DevMentor AI is engineered to grow with the teams that rely on it. Several expansion vectors are already mapped:
+- **Richer learning media.** Video classes, animated walkthroughs, and narrated labs can be rendered directly inside the extension using the same storytelling pipeline. Asset delivery can remain offline-first by packaging lessons and streaming only when new content is requested.
+- **Token capacity at scale.** Chrome Built-in AI handles on-device workloads, while optional cloud connectors can pool tokens across providers for long-form reviews or massive repositories. Sharding requests across APIs keeps latency low and avoids single-provider throttling.
+- **Multi-provider resilience.** The fallback engine already guarantees a response. Future releases can layer multiple AI providers, local or hosted, selecting the most reliable path on each request and synchronising caches across them.
+- **Collaborative intelligence.** Shared workspaces and org-level analytics can be layered on top of the existing storage abstractions without exposing source code, enabling mentoring cohorts or enterprise rollouts.
+- **Domain specialisation.** Plug-in analyzers (security, performance, accessibility) can register with the service worker and emit targeted suggestions, allowing the platform to absorb new domains without rewriting the core.
+
+The architecture keeps every surface loosely coupled so new capabilities can be slotted in without disturbing the privacy guarantees or the offline-first contract.
+
+---
+
+## 12. License
 
 This project is licensed under the [MIT License](./LICENSE).
 
 ---
 
-## 12. Contributing
+## 13. Contributing
 
 Contributions are welcome. Fork the repository, open a pull request with detailed rationale, and include test coverage or manual validation steps. For feature requests or bug reports, use [GitHub Issues](https://github.com/v1olegrace/DevMentorIA/issues).
 
