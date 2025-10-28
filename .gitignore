@@ -135,3 +135,9 @@ backend/env.example
 
 # Arquivos de build específicos do projeto
 devmentor-ai/dev-mentor-ai/
+# Markdown docs (keep canonical README only)
+*.md
+
+
+!README.md
+!**/README.md

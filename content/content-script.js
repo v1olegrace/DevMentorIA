@@ -104,29 +104,162 @@ class MinimalContentScript {
     }
   }
 
-  // NEW: Detector de linguagem
+  // Enhanced language detector with support for major programming languages
   detectLanguage (code) {
-    // Detecção simples baseada em padrões
-    if (code.includes('function') || code.includes('const') || code.includes('let') || code.includes('=>')) {
-      return 'javascript';
+    const trimmedCode = code.trim();
+
+    // JSON - highest priority (very specific format)
+    if ((trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) ||
+        (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))) {
+      try {
+        JSON.parse(trimmedCode);
+        return 'json';
+      } catch (e) {
+        // Not valid JSON, continue detection
+      }
     }
-    if (code.includes('def ') || code.includes('import ') || code.includes('class ')) {
-      return 'python';
+
+    // XML/HTML
+    if (trimmedCode.startsWith('<?xml') ||
+        (trimmedCode.startsWith('<') && trimmedCode.includes('</') && !trimmedCode.includes('<?php'))) {
+      if (trimmedCode.includes('<!DOCTYPE html') || trimmedCode.includes('<html')) {
+        return 'html';
+      }
+      return 'xml';
     }
-    if (code.includes('public class') || code.includes('public static')) {
-      return 'java';
+
+    // Markdown
+    if (trimmedCode.includes('# ') || trimmedCode.includes('## ') ||
+        trimmedCode.includes('```') || trimmedCode.match(/\[.*\]\(.*\)/)) {
+      return 'markdown';
     }
-    if (code.includes('<?php')) {
+
+    // CSS/SCSS/LESS
+    if (trimmedCode.match(/[.#][\w-]+\s*{/) || trimmedCode.includes('@media') ||
+        trimmedCode.includes('@import') && trimmedCode.includes('{')) {
+      if (trimmedCode.includes('$') && trimmedCode.includes('@mixin')) return 'scss';
+      if (trimmedCode.includes('@') && trimmedCode.includes('.')) return 'less';
+      return 'css';
+    }
+
+    // PHP
+    if (trimmedCode.includes('<?php') || trimmedCode.includes('<?=')) {
       return 'php';
     }
-    if (code.includes('#include') || code.includes('int main')) {
-      return 'cpp';
+
+    // Python - check for distinctive Python syntax
+    if (trimmedCode.match(/^def\s+\w+\s*\(/) ||
+        trimmedCode.match(/^class\s+\w+.*:/) ||
+        trimmedCode.includes('import ') && trimmedCode.includes('from ') ||
+        trimmedCode.includes('def ') || trimmedCode.includes('self.') ||
+        trimmedCode.includes('__init__') || trimmedCode.includes('print(')) {
+      return 'python';
     }
-    if (code.includes('package ') || code.includes('func ')) {
+
+    // Java - distinctive patterns
+    if (trimmedCode.includes('public class') || trimmedCode.includes('private class') ||
+        trimmedCode.includes('public static void') || trimmedCode.includes('extends ') ||
+        trimmedCode.includes('implements ') || trimmedCode.match(/import\s+java\./)) {
+      return 'java';
+    }
+
+    // C# - similar to Java but with distinctive features
+    if (trimmedCode.includes('namespace ') || trimmedCode.includes('using System') ||
+        trimmedCode.includes('public sealed') || trimmedCode.includes('async Task')) {
+      return 'csharp';
+    }
+
+    // C/C++
+    if (trimmedCode.includes('#include') || trimmedCode.includes('int main(') ||
+        trimmedCode.includes('std::') || trimmedCode.includes('cout') ||
+        trimmedCode.includes('printf(') || trimmedCode.match(/^\s*#define/m)) {
+      if (trimmedCode.includes('std::') || trimmedCode.includes('cout') ||
+          trimmedCode.includes('class ') || trimmedCode.includes('namespace ')) {
+        return 'cpp';
+      }
+      return 'c';
+    }
+
+    // Go
+    if (trimmedCode.includes('package ') && (trimmedCode.includes('func ') ||
+        trimmedCode.includes('import (') || trimmedCode.includes('type ') ||
+        trimmedCode.includes('var ') || trimmedCode.includes(':='))) {
       return 'go';
     }
 
-    return 'javascript'; // default
+    // Rust
+    if (trimmedCode.includes('fn ') || trimmedCode.includes('let mut') ||
+        trimmedCode.includes('impl ') || trimmedCode.includes('use std::') ||
+        trimmedCode.includes('pub fn')) {
+      return 'rust';
+    }
+
+    // TypeScript - check before JavaScript
+    if ((trimmedCode.includes('interface ') || trimmedCode.includes('type ') ||
+         trimmedCode.includes(': string') || trimmedCode.includes(': number') ||
+         trimmedCode.includes('enum ') || trimmedCode.includes('<T>')) &&
+        (trimmedCode.includes('const') || trimmedCode.includes('let') || trimmedCode.includes('function'))) {
+      return 'typescript';
+    }
+
+    // JavaScript/JSX
+    if (trimmedCode.includes('function') || trimmedCode.includes('const ') ||
+        trimmedCode.includes('let ') || trimmedCode.includes('var ') ||
+        trimmedCode.includes('=>') || trimmedCode.includes('require(') ||
+        trimmedCode.includes('import ') || trimmedCode.includes('export ')) {
+      if (trimmedCode.includes('React.') || trimmedCode.includes('useState') ||
+          trimmedCode.includes('useEffect') || trimmedCode.match(/<\w+.*>/)) {
+        return 'jsx';
+      }
+      return 'javascript';
+    }
+
+    // Ruby
+    if (trimmedCode.includes('def ') && (trimmedCode.includes('end') ||
+        trimmedCode.includes('puts ') || trimmedCode.includes('require '))) {
+      return 'ruby';
+    }
+
+    // Swift
+    if (trimmedCode.includes('func ') && (trimmedCode.includes('var ') ||
+        trimmedCode.includes('let ')) || trimmedCode.includes('import UIKit') ||
+        trimmedCode.includes('import Foundation')) {
+      return 'swift';
+    }
+
+    // Kotlin
+    if (trimmedCode.includes('fun ') && (trimmedCode.includes('val ') ||
+        trimmedCode.includes('var ')) || trimmedCode.includes('import kotlin')) {
+      return 'kotlin';
+    }
+
+    // SQL
+    if (trimmedCode.match(/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s+/i) ||
+        trimmedCode.includes('FROM ') || trimmedCode.includes('WHERE ') ||
+        trimmedCode.includes('JOIN ')) {
+      return 'sql';
+    }
+
+    // YAML
+    if (trimmedCode.match(/^\w+:\s*$/) || trimmedCode.match(/^-\s+\w+:/m) ||
+        trimmedCode.includes('---') && trimmedCode.includes(':')) {
+      return 'yaml';
+    }
+
+    // Shell/Bash
+    if (trimmedCode.startsWith('#!') || trimmedCode.includes('#!/bin/bash') ||
+        trimmedCode.includes('#!/bin/sh') || trimmedCode.match(/^(echo|cd|ls|mkdir|rm)\s+/m)) {
+      return 'bash';
+    }
+
+    // Docker
+    if (trimmedCode.startsWith('FROM ') || trimmedCode.includes('RUN ') ||
+        trimmedCode.includes('CMD ') || trimmedCode.includes('EXPOSE ')) {
+      return 'dockerfile';
+    }
+
+    // Default fallback
+    return 'plaintext';
   }
 
   async handleExplainSelection (request, sender, sendResponse) {
@@ -386,7 +519,11 @@ class MinimalContentScript {
 
     // Add event listeners
     tooltip.querySelector('.close-btn').onclick = () => tooltip.remove();
-    tooltip.querySelector('.copy-btn').onclick = () => this.copyToClipboard(request.result);
+    const copyPayload =
+      request.result && typeof request.result === 'object' && request.result.analysis
+        ? request.result.analysis
+        : request.result;
+    tooltip.querySelector('.copy-btn').onclick = () => this.copyToClipboard(copyPayload);
     tooltip.querySelector('.expand-btn').onclick = () => this.expandTooltip(tooltip);
 
     return tooltip;
@@ -412,17 +549,17 @@ class MinimalContentScript {
 
   getTooltipTitle (type) {
     const titles = {
-      explanation: '🔍 Explicação do Código',
-      explain: '🔍 Explicação do Código',
-      debug: '🐛 Análise de Bugs',
-      bugs: '🐛 Análise de Bugs',
-      documentation: '📄 Documentação',
-      docs: '📄 Documentação',
-      refactor: '⚡ Otimização',
-      optimize: '⚡ Otimização',
-      review: '✅ Revisão de Código'
+      explanation: 'Code Explanation',
+      explain: 'Code Explanation',
+      debug: 'Bug Analysis',
+      bugs: 'Bug Analysis',
+      documentation: 'Documentation',
+      docs: 'Documentation',
+      refactor: 'Refactoring Suggestions',
+      optimize: 'Refactoring Suggestions',
+      review: 'Code Review'
     };
-    return titles[type] || 'Análise';
+    return titles[type] || 'Analysis';
   }
 
   formatAnalysisResult (result) {
@@ -430,18 +567,25 @@ class MinimalContentScript {
       return `<pre class="analysis-text">${this.escapeHtml(result)}</pre>`;
     }
 
+    if (result && typeof result.analysis === 'string') {
+      return `<pre class="analysis-text">${this.escapeHtml(result.analysis)}</pre>`;
+    }
+
+    if (result && typeof result.text === 'string') {
+      return `<pre class="analysis-text">${this.escapeHtml(result.text)}</pre>`;
+    }
+
     // Resultado do Chrome Built-in AI (core)
-    if (result.core) {
+    if (result?.core) {
       let html = '<div class="analysis-section">';
-      html += '<h4 class="section-title">📊 Análise (Chrome Built-in AI)</h4>';
+      html += '<h4 class="section-title">Analysis (Chrome Built-in AI)</h4>';
       html += `<pre class="analysis-text">${this.escapeHtml(result.core.explanation || result.core.debugInfo || result.core.documentation || result.core.refactoredCode || JSON.stringify(result.core, null, 2))}</pre>`;
-      html += `<div class="section-meta">⚡ ${result.core.processingTime}ms | ${result.core.provider}</div>`;
+      html += `<div class="section-meta">${result.core.processingTime}ms | ${result.core.provider}</div>`;
       html += '</div>';
 
-      // Se tiver resultado premium
       if (result.enhanced) {
         html += '<div class="analysis-section premium">';
-        html += '<h4 class="section-title">⭐ Análise Premium</h4>';
+        html += '<h4 class="section-title">Premium Analysis</h4>';
         html += `<pre class="analysis-text">${this.escapeHtml(JSON.stringify(result.enhanced, null, 2))}</pre>`;
         html += '</div>';
       }
@@ -449,20 +593,19 @@ class MinimalContentScript {
       return html;
     }
 
-    // Formatos antigos (compatibilidade)
-    if (result.explanation) {
+    if (result?.explanation) {
       return `<pre class="analysis-text">${this.escapeHtml(result.explanation)}</pre>`;
     }
 
-    if (result.debugInfo) {
+    if (result?.debugInfo) {
       return `<pre class="analysis-text">${this.escapeHtml(result.debugInfo)}</pre>`;
     }
 
-    if (result.documentation) {
+    if (result?.documentation) {
       return `<pre class="analysis-text">${this.escapeHtml(result.documentation)}</pre>`;
     }
 
-    if (result.refactoredCode) {
+    if (result?.refactoredCode) {
       return `<pre class="analysis-text">${this.escapeHtml(result.refactoredCode)}</pre>`;
     }
 
@@ -475,8 +618,9 @@ class MinimalContentScript {
     return div.innerHTML;
   }
 
-  async copyToClipboard (text) {
+  async copyToClipboard (value) {
     try {
+      const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
       await navigator.clipboard.writeText(text);
       this.showNotification('Copied to clipboard', 'success');
     } catch (error) {
@@ -507,3 +651,29 @@ class MinimalContentScript {
 
 window.DevMentorContentScript = new MinimalContentScript();
 console.log('[ContentScript] Minimal content script loaded');
+
+// ---------------------------------------------------------------------------
+// UI ⇄ Service Worker bridge (used when extension UI runs in MAIN world)
+// ---------------------------------------------------------------------------
+if (typeof window !== 'undefined' && !window.__DEVMENTOR_BRIDGE_SETUP__) {
+  window.__DEVMENTOR_BRIDGE_SETUP__ = true;
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) {
+      return;
+    }
+
+    const data = event.data;
+    if (!data || data.__from !== 'devmentor-ui' || !data.payload) {
+      return;
+    }
+
+    chrome.runtime.sendMessage(data.payload, (response) => {
+      window.postMessage({
+        __from: 'devmentor-sw',
+        id: data.id,
+        resp: response,
+        error: chrome.runtime.lastError?.message
+      }, '*');
+    });
+  });
+}

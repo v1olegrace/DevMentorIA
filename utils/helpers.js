@@ -341,7 +341,7 @@ window.DevMentorHelpers = {
       // Check if we have API key configured
       const result = await chrome.storage.sync.get(['aiApiKey', 'aiProvider']);
       const hasApiKey = !!result.aiApiKey;
-      const provider = result.aiProvider || 'openai';
+      const provider = result.aiProvider || 'chrome';
       
       if (!hasApiKey) {
         return { available: false, reason: 'No API key configured' };
@@ -702,7 +702,6 @@ window.DevMentorHelpers = {
       'utils/interactive-playground.js',
       'utils/visual-metaphor-engine.js',
       'utils/diagram-generator.js',
-      'utils/ai-video-generator.js',
       'utils/quiz-generator.js',
       'utils/gemini-pro-integration.js',
       'utils/advanced-citation-engine.js',

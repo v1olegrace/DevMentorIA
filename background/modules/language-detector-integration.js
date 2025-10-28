@@ -2,7 +2,7 @@
  * Lightweight language detector with optional Chrome AI integration.
  */
 
-/* global ai */
+/* global self, chrome */
 /* eslint-disable no-console */
 
 const FALLBACK_PATTERNS = [
@@ -22,6 +22,16 @@ export class LanguageDetectorIntegration {
   constructor () {
     this.cache = new Map();
     this.cacheTTL = 1000 * 60 * 30; // 30 minutes
+  }
+
+  #resolveAIContext () {
+    if (typeof self !== 'undefined' && self.ai) {
+      return self.ai;
+    }
+    if (typeof chrome !== 'undefined' && chrome.ai) {
+      return chrome.ai;
+    }
+    return null;
   }
 
   async detectLanguage (code, { useCache = true } = {}) {
@@ -45,16 +55,38 @@ export class LanguageDetectorIntegration {
 
   async #detectWithChromeAI (code) {
     try {
-      if (typeof ai === 'undefined' || !ai.languageDetector) {
+      const aiContext = this.#resolveAIContext();
+      if (!aiContext?.languageDetector) {
         return null;
       }
 
-      const capabilities = await ai.languageDetector.capabilities();
-      if (!capabilities?.available) return null;
+      if (typeof aiContext.languageDetector.capabilities === 'function') {
+        const capabilities = await aiContext.languageDetector.capabilities();
+        const available = typeof capabilities?.available !== 'undefined'
+          ? capabilities.available
+          : capabilities;
 
-      const response = await ai.languageDetector.detect(code);
-      const [best] = response.languages ?? [];
-      if (!best) return null;
+        if (available === false || `${available}`.toLowerCase() === 'no') {
+          return null;
+        }
+      }
+
+      let languages;
+      if (typeof aiContext.languageDetector.detect === 'function') {
+        const response = await aiContext.languageDetector.detect(code);
+        languages = response?.languages ?? response ?? [];
+      } else if (typeof aiContext.languageDetector.create === 'function') {
+        const detector = await aiContext.languageDetector.create();
+        const response = await detector.detect(code);
+        languages = response?.languages ?? response ?? [];
+      } else {
+        return null;
+      }
+
+      const [best] = languages;
+      if (!best) {
+        return null;
+      }
 
       return {
         language: best.language,
@@ -78,3 +110,5 @@ export class LanguageDetectorIntegration {
 }
 
 export default new LanguageDetectorIntegration();
+
+

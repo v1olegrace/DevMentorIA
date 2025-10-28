@@ -10,5 +10,6 @@ docs
 examples
 utils
 options.js
+popup.js
 options/
 tests

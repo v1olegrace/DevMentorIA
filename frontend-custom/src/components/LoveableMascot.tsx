@@ -37,6 +37,7 @@ export const LoveableMascot: React.FC<LoveableMascotProps> = ({
 
   return onClick ? (
     <button
+      type="button"
       onClick={onClick}
       className="border-0 bg-transparent p-0 inline-block"
       aria-label="DevMentorAI Mascot"

@@ -10,8 +10,8 @@
 import { AISessionManager } from './modules/ai-session-manager.js';
 import { ContextMenuManager } from './modules/context-menu.js';
 import { StorageManager } from './modules/storage.js';
-import { ChromeAI } from './modules/chrome-ai.js';
-import GitHubAPI from '../utils/github-api-integration.js';
+import { chromeBuiltinAI } from './modules/chrome-builtin-ai-manager.js';
+import githubAPI from '../utils/github-api-integration.js';
 import StackOverflowAPI from '../utils/stackoverflow-api-integration.js';
 import MDNIntegration from '../utils/mdn-api-integration.js';
 import PackageManagerAPI from '../utils/package-manager-api-integration.js';
@@ -20,8 +20,9 @@ import languageDetector from './modules/language-detector-integration.js';
 
 // Global state (ephemeral - will be lost on termination)
 let isInitialized = false;
+let initializationPromise = null;
 const activeRequests = new Map();
-const chromeAI = new ChromeAI();
+let githubIntegrationEnabled = false;
 
 // Persistent state keys
 const STORAGE_KEYS = {
@@ -88,41 +89,65 @@ async function initializeExtension () {
     return;
   }
 
-  try {
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  initializationPromise = (async () => {
     console.log('[ServiceWorker] Initializing extension...');
 
     // Initialize storage manager
     const storageManager = new StorageManager();
     await storageManager.initialize();
 
+    try {
+      const storedGithubPref = await storageManager.getData('devmentor_github_enabled');
+      if (typeof storedGithubPref === 'boolean') {
+        githubIntegrationEnabled = storedGithubPref;
+      }
+    } catch (prefError) {
+      console.warn('[ServiceWorker] Could not restore GitHub integration preference:', prefError);
+    }
+
     // Initialize AI session manager
     const aiSessionManager = new AISessionManager();
     await aiSessionManager.initialize();
 
+    // Initialize Chrome Built-in AI Manager (ALL 7 APIs)
+    console.log('[ServiceWorker] Initializing Chrome Built-in AI Manager...');
+    const capabilities = await chromeBuiltinAI.initialize();
+    console.log('[ServiceWorker] Chrome Built-in AI capabilities:', capabilities);
+    console.log(`[ServiceWorker] Available APIs: ${chromeBuiltinAI.getAPICount()}/7`);
+
     // Initialize context menu manager
     const contextMenuManager = new ContextMenuManager();
 
-    // Check if context menus already exist
-    const contextMenusCreated = await storageManager.getData(STORAGE_KEYS.CONTEXT_MENUS_CREATED);
+    // Always recreate context menus on initialization to avoid duplicates
+    // First, remove all existing menus
+    await contextMenuManager.clearAll();
 
-    if (!contextMenusCreated) {
-      await setupContextMenus(contextMenuManager);
-      await storageManager.setData(STORAGE_KEYS.CONTEXT_MENUS_CREATED, true);
-    }
+    // Now create fresh menus
+    await setupContextMenus(contextMenuManager);
 
     // Set up cleanup alarm (replaces setInterval)
     await setupCleanupAlarm();
 
-    isInitialized = true;
     console.log('[ServiceWorker]  Extension initialized successfully');
 
     // Track initialization
-    await trackEvent('extension_initialized', { reason: 'startup' });
-  } catch (error) {
+    trackEvent('extension_initialized', { reason: 'startup' });
+
+    isInitialized = true;
+  })().catch(async (error) => {
     console.error('[ServiceWorker]  Initialization failed:', error);
-    await trackEvent('initialization_error', { error: error.message });
+    trackEvent('initialization_error', { error: error.message });
+    isInitialized = false;
     throw error;
-  }
+  }).finally(() => {
+    initializationPromise = null;
+  });
+
+  return initializationPromise;
 }
 
 // --- CONTEXT MENU SETUP ---
@@ -246,7 +271,7 @@ async function handleContextMenuClick (info, tab) {
       context: { url: tab.url }
     });
 
-    await trackEvent('context_menu_used', {
+    trackEvent('context_menu_used', {
       action,
       hasSelection: !!info.selectionText
     });
@@ -259,7 +284,58 @@ async function handleCommand (command, tab) {
   try {
     console.log(`[ServiceWorker] Command received: ${command}`);
 
-    // Inject content script if needed
+    // Handle commands that don't require selection first
+    if (command === 'toggle-panel') {
+      // Toggle sidebar panel via content script
+      try {
+        await chrome.tabs.sendMessage(tab.id, { action: 'toggle-sidebar-panel' });
+        trackEvent('command_executed', { command });
+      } catch (error) {
+        // If content script not loaded, try to inject it first
+        try {
+          await injectContentScriptIfNeeded(tab.id);
+          await chrome.tabs.sendMessage(tab.id, { action: 'toggle-sidebar-panel' });
+          trackEvent('command_executed', { command });
+        } catch (injectionError) {
+          console.error('[ServiceWorker] Failed to toggle sidebar panel:', injectionError);
+        }
+      }
+      return;
+    }
+
+    if (command === 'take-screenshot') {
+      // Capture screenshot
+      try {
+        // Minimize the sidebar panel before capturing screenshot
+        try {
+          await chrome.tabs.sendMessage(tab.id, { action: 'minimize-sidebar-panel' });
+          // Wait for minimize animation to complete (300ms transition)
+          await new Promise(resolve => setTimeout(resolve, 350));
+        } catch (minimizeError) {
+          // Panel might not be injected, continue anyway
+          console.log('[ServiceWorker] Sidebar panel not found, continuing with screenshot');
+        }
+
+        const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+          format: 'png'
+        });
+
+        // Download the screenshot
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        await chrome.downloads.download({
+          url: dataUrl,
+          filename: `devmentor-screenshot-${timestamp}.png`,
+          saveAs: false
+        });
+
+        trackEvent('screenshot_captured', { method: 'keyboard_shortcut' });
+      } catch (error) {
+        console.error('[ServiceWorker] Screenshot capture failed:', error);
+      }
+      return;
+    }
+
+    // Inject content script if needed for code analysis commands
     await injectContentScriptIfNeeded(tab.id);
 
     // Get selected text
@@ -296,10 +372,10 @@ async function handleCommand (command, tab) {
       console.warn(`[ServiceWorker] Unknown command: ${command}`);
     }
 
-    await trackEvent('command_executed', { command, hasSelection: !!selectedText });
+    trackEvent('command_executed', { command, hasSelection: !!selectedText });
   } catch (error) {
     console.error(`[ServiceWorker] Command ${command} failed:`, error);
-    await trackEvent('command_failed', { command, error: error.message });
+    trackEvent('command_failed', { command, error: error.message });
   }
 }
 
@@ -333,9 +409,55 @@ async function handleMessage (message, sender, sendResponse) {
     case 'refactor-code':
       await handleRefactorCode(message, sender, sendResponse);
       break;
+    case 'review-code':
+      await handleReviewCode(message, sender, sendResponse);
+      break;
+    case 'generate-story':
+      await handleGenerateStory(message, sender, sendResponse);
+      break;
     case 'inject-sidebar':
       await handleInjectSidebar(message, sender, sendResponse);
       break;
+
+    // Frontend Popup Integration
+    case 'analyzeCode':
+      await handleAnalyzeCode(message, sender, sendResponse);
+      break;
+    case 'generateRichExplanation':
+      await handleGenerateRichExplanation(message, sender, sendResponse);
+      break;
+
+    // Gamification System
+    case 'get-gamification-summary':
+      await handleGetGamificationSummary(message, sender, sendResponse);
+      break;
+    case 'award-xp':
+      await handleAwardXP(message, sender, sendResponse);
+      break;
+
+    // Chrome Built-in AI APIs (All 7 APIs)
+    case 'ai-write':
+      await handleAIWrite(message, sender, sendResponse);
+      break;
+    case 'ai-rewrite':
+      await handleAIRewrite(message, sender, sendResponse);
+      break;
+    case 'ai-proofread':
+      await handleAIProofread(message, sender, sendResponse);
+      break;
+    case 'ai-translate':
+      await handleAITranslate(message, sender, sendResponse);
+      break;
+    case 'ai-summarize':
+      await handleAISummarize(message, sender, sendResponse);
+      break;
+    case 'ai-detect-language':
+      await handleAIDetectLanguage(message, sender, sendResponse);
+      break;
+    case 'ai-get-capabilities':
+      await handleAIGetCapabilities(message, sender, sendResponse);
+      break;
+
     case 'keep-alive':
       sendResponse({ success: true, timestamp: Date.now() });
       break;
@@ -358,6 +480,9 @@ async function handleMessage (message, sender, sendResponse) {
     case 'detect-language':
       await handleLanguageDetection(message, sender, sendResponse);
       break;
+    case 'set-github-enabled':
+      await handleSetGitHubEnabled(message, sender, sendResponse);
+      break;
     default:
       sendResponse({ success: false, error: `Unknown action: ${message.action}` });
     }
@@ -370,15 +495,20 @@ async function handleMessage (message, sender, sendResponse) {
 }
 
 // --- MESSAGE HANDLERS ---
-async function handleGetAIStatus (request, sender, sendResponse) {
+async function handleGetAIStatus (_request, _sender, sendResponse) {
   try {
-    await chromeAI.initialize();
-    const status = await chromeAI.getStatus();
+    if (!isInitialized) {
+      await initializeExtension();
+    }
+
+    // Use chromeBuiltinAI instead of legacy chromeAI
+    const capabilities = chromeBuiltinAI.capabilities;
+    const aiAvailable = Object.values(capabilities).some(val => val === true);
 
     sendResponse({
       initialized: isInitialized,
-      aiAvailable: status.available,
-      capabilities: status.capabilities || {}
+      aiAvailable: aiAvailable,
+      capabilities: capabilities
     });
   } catch (error) {
     console.error('[ServiceWorker] Get AI status failed:', error);
@@ -437,66 +567,246 @@ async function handleTriggerAnalysis (request, sender, sendResponse) {
   }
 }
 
-async function handleExplainCode (request, sender, sendResponse) {
+async function handleExplainCode (request, _sender, sendResponse) {
   try {
-    const result = await chromeAI.explainCode(request.code, request.context);
+    // Validação de parâmetros
+    if (!request.code || typeof request.code !== 'string') {
+      sendResponse({ success: false, error: 'Invalid or missing code parameter' });
+      return;
+    }
 
-    await trackEvent('code_explained', {
+    const result = await chromeBuiltinAI.analyzeCode(request.code, {
+      type: 'explain',
+      language: request.context?.language || 'javascript'
+    });
+
+    trackEvent('code_explained', {
       codeLength: request.code.length
     });
 
-    sendResponse({ success: true, data: result });
+    sendResponse({
+      success: true,
+      data: buildAnalysisResponse(request, result, 'explain')
+    });
   } catch (error) {
     console.error('[ServiceWorker] Explain code failed:', error);
-    await trackEvent('code_explain_failed', { error: error.message });
+    trackEvent('code_explain_failed', { error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
-async function handleDebugCode (request, sender, sendResponse) {
+async function handleDebugCode (request, _sender, sendResponse) {
   try {
-    const result = await chromeAI.debugCode(request.code, request.context);
+    // Validação de parâmetros
+    if (!request.code || typeof request.code !== 'string') {
+      sendResponse({ success: false, error: 'Invalid or missing code parameter' });
+      return;
+    }
 
-    await trackEvent('code_debugged', {
+    const result = await chromeBuiltinAI.analyzeCode(request.code, {
+      type: 'debug',
+      language: request.context?.language || 'javascript'
+    });
+
+    trackEvent('code_debugged', {
       codeLength: request.code.length
     });
 
-    sendResponse({ success: true, data: result });
+    sendResponse({
+      success: true,
+      data: buildAnalysisResponse(request, result, 'debug')
+    });
   } catch (error) {
     console.error('[ServiceWorker] Debug code failed:', error);
-    await trackEvent('code_debug_failed', { error: error.message });
+    trackEvent('code_debug_failed', { error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
-async function handleDocumentCode (request, sender, sendResponse) {
+async function handleDocumentCode (request, _sender, sendResponse) {
   try {
-    const result = await chromeAI.generateDocumentation(request.code, request.context);
+    // Validação de parâmetros
+    if (!request.code || typeof request.code !== 'string') {
+      sendResponse({ success: false, error: 'Invalid or missing code parameter' });
+      return;
+    }
 
-    await trackEvent('documentation_generated', {
+    const result = await chromeBuiltinAI.analyzeCode(request.code, {
+      type: 'document',
+      language: request.context?.language || 'javascript'
+    });
+
+    trackEvent('documentation_generated', {
       codeLength: request.code.length
     });
 
-    sendResponse({ success: true, data: result });
+    sendResponse({
+      success: true,
+      data: buildAnalysisResponse(request, result, 'document')
+    });
   } catch (error) {
     console.error('[ServiceWorker] Document code failed:', error);
-    await trackEvent('documentation_failed', { error: error.message });
+    trackEvent('documentation_failed', { error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
-async function handleRefactorCode (request, sender, sendResponse) {
+async function handleRefactorCode (request, _sender, sendResponse) {
   try {
-    const result = await chromeAI.refactorCode(request.code, request.context);
+    // Validação de parâmetros
+    if (!request.code || typeof request.code !== 'string') {
+      sendResponse({ success: false, error: 'Invalid or missing code parameter' });
+      return;
+    }
 
-    await trackEvent('code_refactored', {
+    const result = await chromeBuiltinAI.analyzeCode(request.code, {
+      type: 'refactor',
+      language: request.context?.language || 'javascript'
+    });
+
+    trackEvent('code_refactored', {
       codeLength: request.code.length
     });
 
-    sendResponse({ success: true, data: result });
+    sendResponse({
+      success: true,
+      data: buildAnalysisResponse(request, result, 'refactor')
+    });
   } catch (error) {
     console.error('[ServiceWorker] Refactor code failed:', error);
-    await trackEvent('refactor_failed', { error: error.message });
+    trackEvent('refactor_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleReviewCode (request, _sender, sendResponse) {
+  try {
+    // Validação de parâmetros
+    if (!request.code || typeof request.code !== 'string') {
+      sendResponse({ success: false, error: 'Invalid or missing code parameter' });
+      return;
+    }
+
+    const result = await chromeBuiltinAI.analyzeCode(request.code, {
+      type: 'review',
+      language: request.context?.language || 'javascript'
+    });
+
+    trackEvent('code_reviewed', {
+      codeLength: request.code.length
+    });
+
+    sendResponse({
+      success: true,
+      data: buildAnalysisResponse(request, result, 'review')
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] Review code failed:', error);
+    trackEvent('review_failed', { error: error.message });
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+function buildAnalysisResponse (request, aiResult, type) {
+  const language = request.context?.language || 'javascript';
+  const analysisValue = typeof aiResult === 'string' ? aiResult : aiResult?.analysis;
+  const resolvedAnalysis = analysisValue ?? (aiResult
+    ? (typeof aiResult === 'string' ? aiResult : JSON.stringify(aiResult, null, 2))
+    : '');
+
+  return {
+    type,
+    code: request.code ?? '',
+    language,
+    analysis: resolvedAnalysis,
+    source: aiResult?.source ?? 'chrome-builtin-ai',
+    timestamp: aiResult?.timestamp ?? Date.now(),
+    raw: aiResult,
+    meta: {
+      language,
+      provider: aiResult?.source ?? 'chrome-builtin-ai',
+      requestedType: aiResult?.type ?? type
+    }
+  };
+}
+
+async function handleGenerateStory (request, sender, sendResponse) {
+  try {
+    const { code, language = 'javascript' } = request;
+
+    // Create storytelling prompt
+    const storyPrompt = `You are DevMentor AI, a creative programming teacher. Transform this ${language} code into an engaging educational story with 3 scenes.
+
+For each scene, provide:
+1. A creative title
+2. Engaging narration that explains the code concept
+3. Technical explanation
+4. A dialogue from DevMentor character
+
+Format your response as JSON with this structure:
+{
+  "scenes": [
+    {
+      "id": "1",
+      "chapter": 1,
+      "scene": 1,
+      "title": "Scene Title",
+      "narration": "Story narration...",
+      "code": "code snippet",
+      "explanation": "Technical explanation...",
+      "character": {
+        "name": "DevMentor",
+        "avatar": "mentor",
+        "dialogue": "Character dialogue..."
+      }
+    }
+  ]
+}
+
+Code to transform into story:
+\`\`\`${language}
+${code}
+\`\`\``;
+
+    const result = await chromeBuiltinAI.prompt(storyPrompt);
+
+    // Try to parse JSON response
+    let scenes;
+    try {
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        scenes = parsed.scenes;
+      }
+    } catch (parseError) {
+      // Fallback: create basic scenes
+      scenes = [
+        {
+          id: '1',
+          chapter: 1,
+          scene: 1,
+          title: 'The Journey Begins',
+          narration: 'A developer encountered mysterious code...',
+          code,
+          explanation: result.substring(0, 200),
+          character: {
+            name: 'DevMentor',
+            avatar: 'mentor',
+            dialogue: 'Let\'s explore this code together!'
+          }
+        }
+      ];
+    }
+
+    trackEvent('story_generated', {
+      codeLength: code.length,
+      scenesCount: scenes.length
+    });
+
+    sendResponse({ success: true, data: { scenes } });
+  } catch (error) {
+    console.error('[ServiceWorker] Generate story failed:', error);
+    trackEvent('story_generation_failed', { error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
@@ -504,58 +814,78 @@ async function handleRefactorCode (request, sender, sendResponse) {
 async function handleInjectSidebar (request, sender, sendResponse) {
   try {
     await injectSidebar(sender.tab.id);
-    await trackEvent('sidebar_injected', { tabId: sender.tab.id });
+    trackEvent('sidebar_injected', { tabId: sender.tab.id });
     sendResponse({ success: true });
   } catch (error) {
     console.error('[ServiceWorker] Sidebar injection failed:', error);
-    await trackEvent('sidebar_injection_failed', { error: error.message });
+    trackEvent('sidebar_injection_failed', { error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
 // --- EXTERNAL APIs HANDLERS ---
-async function handleGitHubRequest (request, sender, sendResponse) {
+async function handleGitHubRequest (request, _sender, sendResponse) {
   try {
+    if (!githubIntegrationEnabled) {
+      sendResponse({
+        success: false,
+        error: 'GitHub integration is disabled by the user.'
+      });
+      return;
+    }
+
+    // Validação de parâmetros
+    if (!request.method || !request.params) {
+      sendResponse({ success: false, error: 'Missing method or params' });
+      return;
+    }
+
     const { method, params } = request;
     let result;
 
     switch (method) {
     case 'getRepositoryInfo':
-      result = await GitHubAPI.getRepositoryInfo(params.repoUrl);
+      result = await githubAPI.getRepositoryInfo(params.repoUrl);
       break;
     case 'findSimilarCode':
-      result = await GitHubAPI.findSimilarCode(params.codeSnippet, params.language);
+      result = await githubAPI.findSimilarCode(params.codeSnippet, params.language);
       break;
     case 'getPopularPatterns':
-      result = await GitHubAPI.getPopularPatterns(params.language, params.options);
+      result = await githubAPI.getPopularPatterns(params.language, params.options);
       break;
     case 'analyzeTrendingProjects':
-      result = await GitHubAPI.analyzeTrendingProjects(params.options);
+      result = await githubAPI.analyzeTrendingProjects(params.options);
       break;
     case 'getLanguages':
-      result = await GitHubAPI.getLanguages(params.repoUrl);
+      result = await githubAPI.getLanguages(params.repoUrl);
       break;
     case 'checkCodeExistence':
-      result = await GitHubAPI.checkCodeExistence(params.codeSnippet, params.language);
+      result = await githubAPI.checkCodeExistence(params.codeSnippet, params.language);
       break;
     case 'getFileContent':
-      result = await GitHubAPI.getFileContent(params.repoUrl, params.filePath);
+      result = await githubAPI.getFileContent(params.repoUrl, params.filePath);
       break;
     default:
       throw new Error(`Unknown GitHub method: ${method}`);
     }
 
-    await trackEvent('github_api_used', { method });
+    trackEvent('github_api_used', { method });
     sendResponse({ success: true, data: result });
   } catch (error) {
     console.error('[ServiceWorker] GitHub API request failed:', error);
-    await trackEvent('github_api_failed', { method: request.method, error: error.message });
+    trackEvent('github_api_failed', { method: request.method, error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
-async function handleStackOverflowRequest (request, sender, sendResponse) {
+async function handleStackOverflowRequest (request, _sender, sendResponse) {
   try {
+    // Validação de parâmetros
+    if (!request.method || !request.params) {
+      sendResponse({ success: false, error: 'Missing method or params' });
+      return;
+    }
+
     const { method, params } = request;
     let result;
 
@@ -582,17 +912,23 @@ async function handleStackOverflowRequest (request, sender, sendResponse) {
       throw new Error(`Unknown StackOverflow method: ${method}`);
     }
 
-    await trackEvent('stackoverflow_api_used', { method });
+    trackEvent('stackoverflow_api_used', { method });
     sendResponse({ success: true, data: result });
   } catch (error) {
     console.error('[ServiceWorker] StackOverflow API request failed:', error);
-    await trackEvent('stackoverflow_api_failed', { method: request.method, error: error.message });
+    trackEvent('stackoverflow_api_failed', { method: request.method, error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
-async function handleMDNRequest (request, sender, sendResponse) {
+async function handleMDNRequest (request, _sender, sendResponse) {
   try {
+    // Validação de parâmetros
+    if (!request.method || !request.params) {
+      sendResponse({ success: false, error: 'Missing method or params' });
+      return;
+    }
+
     const { method, params } = request;
     let result;
 
@@ -625,17 +961,23 @@ async function handleMDNRequest (request, sender, sendResponse) {
       throw new Error(`Unknown MDN method: ${method}`);
     }
 
-    await trackEvent('mdn_api_used', { method });
+    trackEvent('mdn_api_used', { method });
     sendResponse({ success: true, data: result });
   } catch (error) {
     console.error('[ServiceWorker] MDN API request failed:', error);
-    await trackEvent('mdn_api_failed', { method: request.method, error: error.message });
+    trackEvent('mdn_api_failed', { method: request.method, error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
 
-async function handlePackageManagerRequest (request, sender, sendResponse) {
+async function handlePackageManagerRequest (request, _sender, sendResponse) {
   try {
+    // Validação de parâmetros
+    if (!request.method || !request.params) {
+      sendResponse({ success: false, error: 'Missing method or params' });
+      return;
+    }
+
     const { method, params } = request;
     let result;
 
@@ -668,11 +1010,11 @@ async function handlePackageManagerRequest (request, sender, sendResponse) {
       throw new Error(`Unknown PackageManager method: ${method}`);
     }
 
-    await trackEvent('package_manager_api_used', { method });
+    trackEvent('package_manager_api_used', { method });
     sendResponse({ success: true, data: result });
   } catch (error) {
     console.error('[ServiceWorker] PackageManager API request failed:', error);
-    await trackEvent('package_manager_api_failed', { method: request.method, error: error.message });
+    trackEvent('package_manager_api_failed', { method: request.method, error: error.message });
     sendResponse({ success: false, error: error.message });
   }
 }
@@ -691,6 +1033,12 @@ async function injectContentScriptIfNeeded (tabId) {
         files: ['content/content-script.js']
       });
 
+      // Inject sidebar panel (ISOLATED world)
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content/sidebar-panel.js']
+      });
+
       // Inject page bridge for site-specific integrations (MAIN world)
       await chrome.scripting.executeScript({
         target: { tabId },
@@ -698,7 +1046,7 @@ async function injectContentScriptIfNeeded (tabId) {
         world: 'MAIN'
       });
 
-      console.log('[ServiceWorker]  Content script and page bridge injected successfully');
+      console.log('[ServiceWorker] Content script, sidebar panel and page bridge injected successfully');
     }
   } catch (error) {
     console.error('[ServiceWorker]  Failed to inject content script:', error);
@@ -742,27 +1090,18 @@ async function injectSidebar (tabId) {
 
 async function handleCodeAnalysis (type, data, tab) {
   try {
-    let result;
+    // Use chromeBuiltinAI.analyzeCode for all types
+    const resultText = await chromeBuiltinAI.analyzeCode(data.selectionText, {
+      type: type,
+      language: data.language || 'javascript'
+    });
 
-    switch (type) {
-    case 'explain':
-      result = await chromeAI.explainCode(data.selectionText, { url: tab.url });
-      break;
-    case 'debug':
-      result = await chromeAI.debugCode(data.selectionText, { url: tab.url });
-      break;
-    case 'document':
-      result = await chromeAI.generateDocumentation(data.selectionText, { url: tab.url });
-      break;
-    case 'refactor':
-      result = await chromeAI.refactorCode(data.selectionText, { url: tab.url });
-      break;
-    case 'review':
-      result = await chromeAI.reviewCode(data.selectionText, { url: tab.url });
-      break;
-    default:
-      throw new Error(`Unknown analysis type: ${type}`);
-    }
+    const result = {
+      type,
+      source: 'chrome-builtin-ai',
+      text: resultText,
+      timestamp: Date.now()
+    };
 
     // Send result to content script
     await chrome.tabs.sendMessage(tab.id, {
@@ -806,16 +1145,20 @@ async function performCleanup () {
   }
 }
 
-async function trackEvent (eventName, data = {}) {
-  try {
-    const storageManager = new StorageManager();
-    await storageManager.trackEvent(eventName, data);
-  } catch (error) {
-    console.error('[ServiceWorker] Failed to track event:', error);
-  }
+// Track event de forma não-bloqueante para não atrasar respostas
+function trackEvent (eventName, data = {}) {
+  // Execute de forma assíncrona sem bloquear
+  Promise.resolve().then(async () => {
+    try {
+      const storageManager = new StorageManager();
+      await storageManager.trackEvent(eventName, data);
+    } catch (error) {
+      console.error('[ServiceWorker] Failed to track event:', error);
+    }
+  });
 }
 
-async function handlePrivacyStats (message, sender, sendResponse) {
+async function handlePrivacyStats (_message, _sender, sendResponse) {
   try {
     const stats = privacyTracker.getStats();
     const report = privacyTracker.generateReport();
@@ -850,7 +1193,7 @@ async function handleLanguageDetection (message, sender, sendResponse) {
 
     const result = await languageDetector.detectLanguage(code, options || {});
 
-    await trackEvent('language_detected', {
+    trackEvent('language_detected', {
       language: result.language,
       method: result.method,
       confidence: result.confidence
@@ -869,8 +1212,577 @@ async function handleLanguageDetection (message, sender, sendResponse) {
   }
 }
 
+async function handleSetGitHubEnabled (message, _sender, sendResponse) {
+  try {
+    githubIntegrationEnabled = message?.enabled !== false;
+    await chrome.storage.local.set({
+      devmentor_github_enabled: githubIntegrationEnabled
+    });
+    trackEvent('github_integration_toggled', {
+      enabled: githubIntegrationEnabled
+    });
+
+    sendResponse({ success: true, enabled: githubIntegrationEnabled });
+  } catch (error) {
+    console.error('[ServiceWorker] Failed to update GitHub integration preference:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// --- FRONTEND POPUP MESSAGE HANDLERS ---
+async function handleAnalyzeCode (request, sender, sendResponse) {
+  try {
+    const { payload } = request;
+    const { code, analysisType, language, options } = payload;
+
+    if (!code || !code.trim()) {
+      sendResponse({ success: false, error: 'No code provided' });
+      return;
+    }
+
+    console.log(`[ServiceWorker] Analyzing code (type: ${analysisType}, language: ${language})`);
+
+    // Perform analysis using Chrome Built-in AI Manager
+    const result = await chromeBuiltinAI.analyzeCode(code, {
+      type: analysisType || 'explain',
+      language: language || 'javascript',
+      skillLevel: options?.skillLevel || 'intermediate',
+      ...options
+    });
+
+    sendResponse({
+      success: true,
+      analysis: result.analysis || result,
+      result: result.analysis || result,
+      metadata: {
+        processingTime: Date.now() - (payload.timestamp || Date.now()),
+        language: language || 'javascript',
+        type: analysisType,
+        source: result.source || 'chrome-builtin-ai'
+      }
+    });
+
+    // Track analytics
+    trackEvent('popup_code_analysis', {
+      type: analysisType,
+      language: language || 'javascript',
+      codeLength: code.length
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] Code analysis failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Analysis failed'
+    });
+  }
+}
+
+async function handleGenerateRichExplanation (request, sender, sendResponse) {
+  try {
+    const { payload } = request;
+    const { code, analysisType, language, userLevel } = payload;
+
+    if (!code || !code.trim()) {
+      sendResponse({ success: false, error: 'No code provided' });
+      return;
+    }
+
+    console.log(`[ServiceWorker] Generating rich explanation (type: ${analysisType}, level: ${userLevel})`);
+
+    // Generate comprehensive explanation using Chrome Built-in AI Manager
+    const richContent = await chromeBuiltinAI.generateRichExplanation(code, {
+      language: language || 'javascript',
+      skillLevel: userLevel || 'intermediate',
+      includeTranslation: false
+    });
+
+    sendResponse({
+      success: true,
+      richContent: {
+        explanation: richContent.explanation,
+        summary: richContent.summary || richContent.explanation.substring(0, 200) + '...',
+        translation: richContent.translation,
+        metadata: {
+          skillLevel: userLevel || 'intermediate',
+          language: language || 'javascript',
+          confidence: 0.95,
+          timestamp: richContent.timestamp
+        }
+      }
+    });
+
+    // Track analytics
+    trackEvent('popup_rich_explanation', {
+      type: analysisType,
+      language: language || 'javascript',
+      userLevel: userLevel || 'intermediate'
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] Rich explanation failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Rich explanation failed'
+    });
+  }
+}
+
+// --- GAMIFICATION SYSTEM HANDLERS ---
+async function handleGetGamificationSummary (request, sender, sendResponse) {
+  try {
+    const { userId = 'default' } = request;
+
+    // Get gamification data from storage
+    const result = await chrome.storage.local.get(['gamificationData']);
+    const gamificationData = result.gamificationData || {};
+
+    // Initialize user data if doesn't exist
+    if (!gamificationData[userId]) {
+      gamificationData[userId] = {
+        level: 1,
+        xp: 0,
+        totalXp: 0,
+        badges: 0,
+        streak: 0,
+        longestStreak: 0,
+        activeChallenges: 0,
+        stats: {
+          tutorialsCompleted: 0,
+          exercisesSolved: 0,
+          perfectScores: 0,
+          codesAnalyzed: 0,
+          helpfulActions: 0
+        },
+        recentBadges: []
+      };
+    }
+
+    const userData = gamificationData[userId];
+
+    // Calculate XP needed for next level (100 * level)
+    const { level, xp, totalXp, badges, streak, longestStreak, activeChallenges, stats, recentBadges } = userData;
+    const xpToNextLevel = 100 * level;
+    const title = getTitleForLevel(level);
+
+    sendResponse({
+      success: true,
+      data: {
+        level,
+        xp,
+        xpToNextLevel,
+        totalXp,
+        title,
+        badges,
+        streak,
+        longestStreak,
+        activeChallenges,
+        stats,
+        recentBadges
+      }
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] Get gamification summary failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Failed to get gamification data'
+    });
+  }
+}
+
+async function handleAwardXP (request, sender, sendResponse) {
+  try {
+    const { userId = 'default', amount, reason } = request;
+
+    if (!amount || amount <= 0) {
+      sendResponse({ success: false, error: 'Invalid XP amount' });
+      return;
+    }
+
+    // Get current gamification data
+    const result = await chrome.storage.local.get(['gamificationData']);
+    const gamificationData = result.gamificationData || {};
+
+    // Initialize user if doesn't exist
+    if (!gamificationData[userId]) {
+      gamificationData[userId] = {
+        level: 1,
+        xp: 0,
+        totalXp: 0,
+        badges: 0,
+        streak: 0,
+        longestStreak: 0,
+        activeChallenges: 0,
+        stats: {
+          tutorialsCompleted: 0,
+          exercisesSolved: 0,
+          perfectScores: 0,
+          codesAnalyzed: 0,
+          helpfulActions: 0
+        },
+        recentBadges: []
+      };
+    }
+
+    const userData = gamificationData[userId];
+
+    // Award XP
+    userData.xp += amount;
+    userData.totalXp += amount;
+
+    // Check for level up
+    const xpToNextLevel = 100 * userData.level;
+    let leveledUp = false;
+
+    if (userData.xp >= xpToNextLevel) {
+      userData.level++;
+      userData.xp -= xpToNextLevel;
+      leveledUp = true;
+      console.log(`[Gamification] User ${userId} leveled up to ${userData.level}!`);
+    }
+
+    // Update stats based on reason
+    if (reason === 'code_analyzed') {
+      userData.stats.codesAnalyzed++;
+    }
+
+    // Save updated data
+    gamificationData[userId] = userData;
+    await chrome.storage.local.set({ gamificationData });
+
+    // Track event
+    trackEvent('xp_awarded', {
+      userId,
+      amount,
+      reason,
+      newLevel: userData.level,
+      leveledUp
+    });
+
+    sendResponse({
+      success: true,
+      data: {
+        xpAwarded: amount,
+        newXp: userData.xp,
+        newTotalXp: userData.totalXp,
+        level: userData.level,
+        leveledUp
+      }
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] Award XP failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Failed to award XP'
+    });
+  }
+}
+
+// Helper function for gamification
+function getTitleForLevel (level) {
+  if (level < 5) return 'Novice Coder';
+  if (level < 10) return 'Junior Developer';
+  if (level < 20) return 'Mid-Level Developer';
+  if (level < 35) return 'Senior Developer';
+  if (level < 50) return 'Tech Lead';
+  return 'Master Engineer';
+}
+
+// =============================================================================
+// CHROME BUILT-IN AI API HANDLERS (ALL 7 APIS)
+// =============================================================================
+
+/**
+ * Handle AI Write request (Writer API)
+ */
+async function handleAIWrite (request, _sender, sendResponse) {
+  try {
+    const { prompt, context, tone, format, length } = request;
+
+    if (!prompt || !prompt.trim()) {
+      sendResponse({ success: false, error: 'No prompt provided' });
+      return;
+    }
+
+    console.log('[ServiceWorker] AI Write request:', { tone, format, length });
+
+    const result = await chromeBuiltinAI.write(prompt, { context, tone, format, length });
+
+    sendResponse({
+      success: true,
+      result,
+      metadata: {
+        tone,
+        format,
+        length,
+        timestamp: Date.now()
+      }
+    });
+
+    trackEvent('ai_write_used', {
+      promptLength: prompt.length,
+      tone,
+      format,
+      length
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] AI Write failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Write operation failed'
+    });
+  }
+}
+
+/**
+ * Handle AI Rewrite request (Rewriter API)
+ */
+async function handleAIRewrite (request, _sender, sendResponse) {
+  try {
+    const { text, context, tone, format, length } = request;
+
+    if (!text || !text.trim()) {
+      sendResponse({ success: false, error: 'No text provided' });
+      return;
+    }
+
+    console.log('[ServiceWorker] AI Rewrite request:', { tone, format, length });
+
+    const result = await chromeBuiltinAI.rewrite(text, { context, tone, format, length });
+
+    sendResponse({
+      success: true,
+      result,
+      metadata: {
+        tone,
+        format,
+        length,
+        originalLength: text.length,
+        timestamp: Date.now()
+      }
+    });
+
+    trackEvent('ai_rewrite_used', {
+      textLength: text.length,
+      tone,
+      format,
+      length
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] AI Rewrite failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Rewrite operation failed'
+    });
+  }
+}
+
+/**
+ * Handle AI Proofread request (Proofreader API)
+ */
+async function handleAIProofread (request, _sender, sendResponse) {
+  try {
+    const { text, language = 'en' } = request;
+
+    if (!text || !text.trim()) {
+      sendResponse({ success: false, error: 'No text provided' });
+      return;
+    }
+
+    console.log('[ServiceWorker] AI Proofread request:', { language, textLength: text.length });
+
+    const result = await chromeBuiltinAI.proofread(text, language);
+
+    sendResponse({
+      success: true,
+      corrected: result.corrected,
+      corrections: result.corrections,
+      hasErrors: result.hasErrors,
+      metadata: {
+        language,
+        originalLength: text.length,
+        correctedLength: result.corrected.length,
+        errorCount: result.corrections.length,
+        timestamp: Date.now()
+      }
+    });
+
+    trackEvent('ai_proofread_used', {
+      language,
+      textLength: text.length,
+      errorCount: result.corrections.length
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] AI Proofread failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Proofread operation failed'
+    });
+  }
+}
+
+/**
+ * Handle AI Translate request (Translator API)
+ */
+async function handleAITranslate (request, _sender, sendResponse) {
+  try {
+    const { text, sourceLanguage, targetLanguage } = request;
+
+    if (!text || !text.trim()) {
+      sendResponse({ success: false, error: 'No text provided' });
+      return;
+    }
+
+    if (!sourceLanguage || !targetLanguage) {
+      sendResponse({ success: false, error: 'Source and target languages required' });
+      return;
+    }
+
+    console.log('[ServiceWorker] AI Translate request:', { sourceLanguage, targetLanguage });
+
+    const result = await chromeBuiltinAI.translate(text, sourceLanguage, targetLanguage);
+
+    sendResponse({
+      success: true,
+      translation: result,
+      metadata: {
+        sourceLanguage,
+        targetLanguage,
+        originalLength: text.length,
+        translatedLength: result.length,
+        timestamp: Date.now()
+      }
+    });
+
+    trackEvent('ai_translate_used', {
+      sourceLanguage,
+      targetLanguage,
+      textLength: text.length
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] AI Translate failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Translation failed'
+    });
+  }
+}
+
+/**
+ * Handle AI Summarize request (Summarizer API)
+ */
+async function handleAISummarize (request, _sender, sendResponse) {
+  try {
+    const { text, type = 'key-points', format = 'markdown', length = 'medium', context } = request;
+
+    if (!text || !text.trim()) {
+      sendResponse({ success: false, error: 'No text provided' });
+      return;
+    }
+
+    console.log('[ServiceWorker] AI Summarize request:', { type, format, length });
+
+    const result = await chromeBuiltinAI.summarize(text, { type, format, length, context });
+
+    sendResponse({
+      success: true,
+      summary: result,
+      metadata: {
+        type,
+        format,
+        length,
+        originalLength: text.length,
+        summaryLength: result.length,
+        timestamp: Date.now()
+      }
+    });
+
+    trackEvent('ai_summarize_used', {
+      type,
+      format,
+      length,
+      textLength: text.length
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] AI Summarize failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Summarization failed'
+    });
+  }
+}
+
+/**
+ * Handle AI Detect Language request (Language Detector API)
+ */
+async function handleAIDetectLanguage (request, _sender, sendResponse) {
+  try {
+    const { text } = request;
+
+    if (!text || !text.trim()) {
+      sendResponse({ success: false, error: 'No text provided' });
+      return;
+    }
+
+    console.log('[ServiceWorker] AI Detect Language request');
+
+    const results = await chromeBuiltinAI.detectLanguage(text);
+
+    sendResponse({
+      success: true,
+      results, // Array of {detectedLanguage, confidence}
+      primaryLanguage: results[0]?.detectedLanguage || 'unknown',
+      confidence: results[0]?.confidence || 0,
+      metadata: {
+        textLength: text.length,
+        alternativesCount: results.length,
+        timestamp: Date.now()
+      }
+    });
+
+    trackEvent('ai_detect_language_used', {
+      textLength: text.length,
+      detectedLanguage: results[0]?.detectedLanguage,
+      confidence: results[0]?.confidence
+    });
+  } catch (error) {
+    console.error('[ServiceWorker] AI Detect Language failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Language detection failed'
+    });
+  }
+}
+
+/**
+ * Handle AI Get Capabilities request
+ */
+async function handleAIGetCapabilities (request, sender, sendResponse) {
+  try {
+    const capabilities = chromeBuiltinAI.getCapabilities();
+    const availableAPIs = chromeBuiltinAI.getAvailableAPIs();
+    const apiCount = chromeBuiltinAI.getAPICount();
+
+    sendResponse({
+      success: true,
+      capabilities,
+      availableAPIs,
+      apiCount,
+      totalAPIs: 7,
+      percentageAvailable: Math.round((apiCount / 7) * 100),
+      timestamp: Date.now()
+    });
+
+    console.log(`[ServiceWorker] AI Capabilities: ${apiCount}/7 APIs available`);
+  } catch (error) {
+    console.error('[ServiceWorker] Get AI Capabilities failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Failed to get capabilities'
+    });
+  }
+}
+
 function generateRequestId () {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Initialize extension on service worker startup

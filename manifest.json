@@ -9,7 +9,8 @@
     "contextMenus",
     "storage",
     "scripting",
-    "alarms"
+    "alarms",
+    "downloads"
   ],
   
   "host_permissions": [
@@ -34,46 +35,39 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https:;"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https://api.github.com https://registry.npmjs.org https://api.npmjs.org https://pypi.org; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' https:;"
   },
 
   "minimum_chrome_version": "88",
   
   "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+D",
+        "mac": "Alt+Shift+D"
+      },
+      "description": "Toggle DevMentor panel"
+    },
     "explain-code": {
       "suggested_key": {
-        "default": "Ctrl+Shift+E",
-        "mac": "Command+Shift+E"
+        "default": "Alt+Shift+E",
+        "mac": "Alt+Shift+E"
       },
       "description": "Explain selected code with AI"
     },
     "debug-code": {
       "suggested_key": {
-        "default": "Ctrl+Shift+B",
-        "mac": "Command+Shift+B"
+        "default": "Alt+Shift+B",
+        "mac": "Alt+Shift+B"
       },
       "description": "Debug selected code"
     },
-    "document-code": {
+    "take-screenshot": {
       "suggested_key": {
-        "default": "Ctrl+Shift+G",
-        "mac": "Command+Shift+G"
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
       },
-      "description": "Generate documentation"
-    },
-    "refactor-code": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+R",
-        "mac": "Command+Shift+R"
-      },
-      "description": "Refactor selected code"
-    },
-    "open-privacy-dashboard": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+P",
-        "mac": "Command+Shift+P"
-      },
-      "description": "Open Privacy Dashboard"
+      "description": "Take screenshot of current page"
     }
   },
   
@@ -91,6 +85,7 @@
       ],
       "js": [
         "content/content-script.js",
+        "content/sidebar-panel.js",
         "content/main.js",
         "content/inject-page-bridge.js",
         "content/ui-manager.js",

@@ -1,3 +1,4 @@
+/* global chrome */
 /**
  * Enhanced Storytelling Mode Component
  * Learn code through interactive stories with animations
@@ -80,7 +81,8 @@ const StorytellingMode: React.FC<StorytellingModeProps> = ({
     return () => clearInterval(interval);
   }, [playing, currentScene, scenes]);
 
-  const createBasicStory = useCallback(() => {
+  const createBasicStory = useCallback((sourceCode: string) => {
+    const safeCode = sourceCode || '';
     // Create a basic story based on code
     const basicScenes: StoryScene[] = [
       {
@@ -89,7 +91,7 @@ const StorytellingMode: React.FC<StorytellingModeProps> = ({
         scene: 1,
         title: 'O Inicio da Jornada',
         narration: 'Era uma vez um desenvolvedor que encontrou um codigo misterioso...',
-        code,
+        code: safeCode,
         explanation: 'Este codigo representa o inicio de sua jornada de aprendizado.',
         character: {
           name: 'DevMentor',
@@ -130,15 +132,23 @@ const StorytellingMode: React.FC<StorytellingModeProps> = ({
     ];
 
     setScenes(basicScenes);
-  }, [code]);
+  }, []);
 
   const generateStory = useCallback(async () => {
+    const sourceCode = code || '';
+
     setLoading(true);
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      createBasicStory(sourceCode);
+      setLoading(false);
+      return;
+    }
+
     try {
       // Request story generation from background script
       const response = await chrome.runtime.sendMessage({
         action: 'generate-story',
-        code,
+        code: sourceCode,
         language
       });
 
@@ -146,20 +156,27 @@ const StorytellingMode: React.FC<StorytellingModeProps> = ({
         setScenes(response.data.scenes);
       } else {
         // Fallback: create basic story structure
-        createBasicStory();
+        createBasicStory(sourceCode);
       }
     } catch (error) {
       console.error('Error generating story:', error);
-      createBasicStory();
+      createBasicStory(sourceCode);
     } finally {
       setLoading(false);
     }
   }, [code, language, createBasicStory]);
 
   useEffect(() => {
-    if (code) {
-      generateStory();
+    if (!code || code.trim().length === 0) {
+      setScenes([]);
+      setLoading(false);
+      setCurrentScene(0);
+      setPlaying(false);
+      setTextProgress(0);
+      return;
     }
+
+    generateStory();
   }, [code, generateStory]);
 
   const handlePlay = () => {

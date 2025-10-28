@@ -1,792 +1,244 @@
-# 🚀 DevMentor AI - Your Personal Code Learning Assistant
+﻿<div align="center">
 
-<div align="center">
+# DevMentor AI â€“ Onâ€‘Device Code Mentor for Chrome
 
-**AI-powered coding mentor that teaches you to understand complex code, right in your browser**
+**Manifest V3 extension that explains, reviews, and teaches code directly in the browser using Chrome Builtâ€‘in AI, with deterministic fallbacks when AI capabilities are unavailable.**
 
-[![Chrome 127+](https://img.shields.io/badge/Chrome-127%2B-blue.svg)](https://www.google.com/chrome/)
-[![Chrome Built-in AI](https://img.shields.io/badge/Chrome%20Built--in%20AI-Gemini%20Nano-green.svg)](https://developer.chrome.com/docs/ai/built-in)
-[![Privacy First](https://img.shields.io/badge/Privacy-100%25%20On--Device-orange.svg)](https://developer.chrome.com/docs/ai/built-in)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code Quality](https://img.shields.io/badge/Code%20Quality-A%2B-brightgreen.svg)](#)
-[![Test Coverage](https://img.shields.io/badge/Coverage-92%25-success.svg)](#)
-
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [GitHub Integration](#-github-integration-new) • [Architecture](#-architecture) • [Testing](#-testing)
+[Chrome 130+](https://www.google.com/chrome/) â€¢ [Chrome Builtâ€‘in AI](https://developer.chrome.com/docs/ai/built-in) â€¢ [Manifest V3](https://developer.chrome.com/docs/extensions/mv3/) â€¢ MIT License
 
 </div>
 
 ---
 
-## 🎯 What is DevMentor AI?
+## 1. Overview
 
-DevMentor AI is a Chrome extension that helps developers understand complex code they encounter on GitHub, StackOverflow, MDN, and other platforms. It doesn't just explain code - it **teaches** you to understand it.
+DevMentor AI is a privacy-first developer assistant that runs entirely on the userâ€™s machine. It intercepts code you are reading on GitHub, StackOverflow, MDN, or any supported site, and provides guided explanations, reviews, documentation drafts, and refactoring suggestions. When Chromeâ€™s on-device AI APIs are unavailable, the extension falls back to a deterministic heuristic engine, ensuring every request returns a result.
 
-### 🌟 Key Highlights
+Key traits:
 
-- 🧠 **Educational Approach** - Teaches concepts, not just descriptions
-- 🔒 **100% Private** - All processing happens on-device with Chrome's Built-in AI
-- ⚡ **Lightning Fast** - Sub-2-second responses
-- 🌐 **Works Offline** - No internet required after model download
-- 🆓 **Genuinely Free** - Powerful FREE tier with all core features
-- 🎨 **4 Chrome AI APIs** - Uses Prompt, Summarization, Write, and Rewrite APIs
-- 🐙 **GitHub Integration** - Enterprise-grade GitHub API integration with caching & rate limiting
+- **100% local execution.** Chrome Built-in AI (Prompt, Writer, Rewriter, Proofreader, Summarizer, Language Detector) is used when available; otherwise, a bundled heuristic analyzer steps in. No source code leaves the browser.
+- **Multi-surface UX.** Users interact through the popup, persistent sidebar, keyboard shortcuts, and a DevTools panel dedicated to privacy and telemetry.
+- **Educational focus.** Storytelling and gamification systems reinforce what the AI explains, turning raw analysis into guided learning.
+- **Integration aware.** GitHub, StackOverflow, MDN, and package registry data can be pulled on demand with user-provided tokens.
 
 ---
 
-## ✨ Features
+## 2. Capabilities
 
-### Core Features (FREE - Chrome Built-in AI)
+| Capability | Description | Implementation |
+|------------|-------------|----------------|
+| Code explanation | Multi-layer explanation with context, patterns, and analogies | `chromeBuiltinAI.analyzeCode(type='explain')` with heuristics fallback |
+| Bug hunting | Identifies unsafe flows and suggests fixes | `chromeBuiltinAI.analyzeCode(type='debug')` + heuristic scan |
+| Documentation draft | Generates documentation outlines and examples | `chromeBuiltinAI.analyzeCode(type='document')` + Markdown templates |
+| Refactor suggestions | Highlights complexity and structure improvements | `chromeBuiltinAI.analyzeCode(type='refactor')` + static metrics |
+| Code review | Summarises risk, quality, and next actions | `chromeBuiltinAI.analyzeCode(type='review')` |
+| Storytelling mode | Converts code into educational scenes | Service worker `generate-story` + deterministic scene builder |
+| Gamification | XP, levels, badges, streaks | Stored via `chrome.storage.local` |
+| Telemetry dashboard | Privacy counters, storage usage, AI readiness | DevTools panel (`devtools/panel.html`) |
+| Integrations | GitHub, StackOverflow, MDN, npm/PyPI | Background modules (`background/modules/*`) with caching |
 
-| Feature | Description | API Used |
-|---------|-------------|----------|
-| **Code Explanation** | Comprehensive teaching with concepts, analogies, and best practices | Prompt API |
-| **Bug Detection** | Identify potential issues and get suggestions for fixes | Prompt API |
-| **Documentation Generation** | Auto-generate JSDoc/comments from code | Write API |
-| **Code Refactoring** | Get suggestions to improve code quality | Rewrite API |
-| **Code Review** | Comprehensive code review with actionable feedback | Prompt API |
-| **Quick Summaries** | Get instant overviews of code functionality | Summarization API |
-| **GitHub Integration** | Search code, analyze patterns, get repository insights | GitHub API |
-
-### Educational Features (Enhanced FREE Tier)
-
-- 🎓 **Deep Analysis** - Understand complex patterns and architectures
-- 💡 **Concept Extraction** - Learn the underlying programming concepts
-- 🔍 **Pattern Detection** - Recognize common design patterns
-- 📚 **Learning Paths** - Get suggestions for what to learn next
-- 🎯 **Real-World Analogies** - Memorable explanations that stick
-- 🐙 **GitHub Insights** - Learn from popular open-source patterns
-
-### Premium Features (PRO/ENTERPRISE)
-
-- 🎥 **AI Video Lessons** - Generated video tutorials for complex topics
-- 📊 **Interactive Diagrams** - Visual representations of code flow
-- 📝 **Personalized Quizzes** - Test your understanding
-- 📖 **Academic Citations** - Proper references for learning materials
-- 📈 **Learning Analytics** - Track your progress over time
-- 👥 **Team Collaboration** - Share insights with your team (ENTERPRISE)
+The popup automatically tracks AI readiness. If `chrome.runtime.sendMessage` is unavailable (e.g., running inside an embedded frame), a MAIN-world bridge relays messages to the service worker. If the service worker cannot respond within 1.5s, the local analysis fallback is returned.
 
 ---
 
-## 🚀 Installation
+## 3. Architecture
 
-### Prerequisites
+The codebase is partitioned into three logical layers that mirror the browser runtime:
 
-- **Chrome 130+** (Check: `chrome://version`)
-- **Chrome Built-in AI** enabled (see setup below)
+1. **Extension runtime (service worker, content scripts, devtools)** – all MV3 entry points and background orchestration live here.
+2. **Application surfaces (React bundle)** – the popup/options UI compiled with Vite/React/TypeScript.
+3. **Shared libraries** – reusable utilities for telemetry, analytics, integration clients, and local heuristics.
 
-### Step 1: Enable Chrome Built-in AI
+`
+DevMentorIA/
+├── manifest.json               # Manifest V3 entry point
+├── background/                 # Service worker + orchestration modules
+│   ├── service-worker.js       # Chrome AI orchestration, messaging, storage
+│   └── modules/                # AI managers, integrations, session control
+├── content/                    # Content script bundle
+│   ├── content-script.js       # Injection, selection capture, bridge wiring
+│   ├── sidebar-panel.js        # Persistent sidebar host
+│   └── assets/styles/          # Scoped styling injected per page
+├── devtools/                   # Custom DevTools panel
+│   ├── devtools.html           # Panel registration
+│   └── panel.html / panel.js   # Privacy + telemetry dashboards
+├── frontend-custom/            # React/Vite UI for popup & options
+│   ├── src/                    # Components, hooks, i18n, state management
+│   └── dist/                   # Built assets consumed by the extension
+├── tests/                      # Unit and behavioural harnesses
+└── utils/                      # Shared analytics, telemetry, helpers
+`
 
-1. Open `chrome://flags` in Chrome
-2. Search for and enable these flags:
-   - `#optimization-guide-on-device-model` → **Enabled**
-   - `#prompt-api-for-gemini-nano` → **Enabled**
-   - `#summarization-api-for-gemini-nano` → **Enabled**
-   - `#writer-rewriter-api-for-gemini-nano` → **Enabled**
-3. Click **"Relaunch"** at the bottom
-4. Wait 5-10 minutes for Gemini Nano model to download
+### Runtime surfaces
 
-### Step 2: Verify Model Status
+- **Service Worker (ackground/service-worker.js)**  
+  Owns lifecycle events, AI capability probing, message routing, fallback orchestration, caching, alarms, and integration adapters (GitHub, StackOverflow, MDN, package registries). It is the single source of truth for Chrome Built‑in AI sessions.
 
-Open DevTools Console and run:
+- **Content Scripts (content/)**  
+  Mount the sidebar UI, listen for selection events, and run the MAIN-world bridge that relays messages for surfaces where chrome.runtime is unavailable. Also responsible for injecting CSS and keeping panel state in sync.
 
-```javascript
-const status = await window.ai.languageModel.capabilities();
-console.log('Gemini Nano Status:', status.available); // Should be 'readily'
-```
+- **Popup / Options (rontend-custom)**  
+  React-based experience compiled with Vite. Hosts analysis controls, storytelling, gamification, GitHub insights, and settings. Automatically degrades to local heuristics when the AI channel is unavailable.
 
-### Step 3: Install Extension
+- **DevTools Panel (devtools/panel.html)**  
+  Presents operational metrics: AI availability, privacy counters (network requests, bytes sent), storage usage, and quick maintenance actions for developers.
+---
 
-#### Option A: From Source (Recommended for Development)
+## 4. Getting Started
 
-1. Clone this repository:
+### 4.1 Prerequisites
+
+1. **Chrome 130 or later** (or Chromium with Chrome Built-in AI support).  
+2. **Chrome Built-in AI** must be enabled once per profile:
+   - Visit `chrome://flags`.
+   - Enable the following flags and relaunch:
+     - `#optimization-guide-on-device-model`
+     - `#prompt-api-for-gemini-nano`
+     - `#summarization-api-for-gemini-nano`
+     - `#writer-rewriter-api-for-gemini-nano`
+   - After relaunch, allow 5â€“10 minutes for the Gemini Nano model to download (check console with `await chrome.ai.languageModel.capabilities()`; status should be `readily`).
+
+### 4.2 Installation (Load Unpacked)
+
+1. Clone the repository:
    ```bash
    git clone https://github.com/v1olegrace/DevMentorIA.git
-   cd DevMentorIA/devmentor-ai
+   cd DevMentorIA
    ```
+2. Build UI assets (optional for first run; prebuilt assets live in `dist-frontend/`):
+   ```bash
+   cd frontend-custom
+   npm install
+   npm run build
+   cd ..
+   ```
+   The `npm run build` step generates assets in `frontend-custom/dist` which are consumed by the extension.
+3. Load the extension:
+   - Open `chrome://extensions/`.
+   - Enable **Developer mode**.
+   - Click **Load unpacked** and select the repository root (`DevMentorIA/`).
 
-2. Load the extension:
-   - Open `chrome://extensions/`
-   - Enable **"Developer mode"** (top right)
-   - Click **"Load unpacked"**
-   - Select the `devmentor-ai` folder
+### 4.3 Verifying AI availability
 
-#### Option B: From Chrome Web Store (Coming Soon)
-
-Will be available after hackathon submission.
-
----
-
-## 📖 Usage
-
-### Quick Start
-
-1. Visit any code-heavy website (GitHub, StackOverflow, etc.)
-2. Select some code on the page
-3. Use keyboard shortcuts or context menu:
-
-| Action | Windows/Linux | Mac | Context Menu |
-|--------|---------------|-----|--------------|
-| **Explain Code** | `Ctrl+Shift+E` | `Cmd+Shift+E` | Right-click → DevMentor AI |
-| **Debug Code** | `Ctrl+Shift+B` | `Cmd+Shift+B` | Right-click → Debug with AI |
-| **Generate Docs** | `Ctrl+Shift+G` | `Cmd+Shift+G` | Right-click → Generate Docs |
-| **Refactor Code** | `Ctrl+Shift+R` | `Cmd+Shift+R` | Right-click → Refactor Code |
-| **Code Story** | `Ctrl+Shift+S` | `Cmd+Shift+S` | Right-click → Code Story |
-
-### Examples
-
-#### Example 1: Explain Complex Code
-
-**Input:**
-```javascript
-class EventEmitter {
-  constructor() {
-    this.events = {};
-  }
-
-  on(event, listener) {
-    if (!this.events[event]) {
-      this.events[event] = [];
-    }
-    this.events[event].push(listener);
-  }
-
-  emit(event, ...args) {
-    if (this.events[event]) {
-      this.events[event].forEach(listener => listener(...args));
-    }
-  }
-}
-```
-
-**Output:**
-```
-🎯 What & Why (Big Picture)
-This implements the Observer Pattern, allowing objects to subscribe to
-and receive notifications about events.
-
-🧠 Core Concepts (Deep Understanding)
-1. Event-Driven Architecture - Decouples event producers from consumers
-2. Observer Pattern - Classic design pattern for publish-subscribe systems
-3. Dynamic Event Registration - Events don't need to be predefined
-
-📖 Line-by-Line Teaching
-- constructor(): Initializes empty event registry
-- on(event, listener): Subscribes listener to event
-- emit(event, ...args): Notifies all listeners of event
-
-💡 Real-World Analogy
-Like subscribing to a YouTube channel - you get notified when
-new content (events) is published.
-
-⚠️ Common Mistakes
-- Memory leaks if listeners aren't removed
-- No error handling if listener throws
-- No way to unsubscribe (missing off() method)
-
-🚀 Next Steps
-- Learn about: Node.js EventEmitter, RxJS Observables
-- Try implementing: removeListener(), once(), listenerCount()
-```
-
-#### Example 2: Debug Buggy Code
-
-**Input:**
-```javascript
-function divide(a, b) {
-  return a / b;
-}
-
-const result = divide(10, 0);
-console.log(result); // Infinity
-```
-
-**Output:**
-```
-🐛 Issues Found:
-
-1. CRITICAL: Missing Zero Division Check
-   Severity: High
-   Line: return a / b
-   Issue: Division by zero returns Infinity, not an error
-   Fix: Add check: if (b === 0) throw new Error('Division by zero')
-
-2. WARNING: No Input Validation
-   Severity: Medium
-   Issue: Accepts non-numeric inputs (NaN results)
-   Fix: Add type checking at function start
-
-3. SUGGESTION: Add JSDoc Documentation
-   Severity: Low
-   Fix: Document parameters and return value
-
-✅ Suggested Refactor:
-function divide(a, b) {
-  if (typeof a !== 'number' || typeof b !== 'number') {
-    throw new TypeError('Parameters must be numbers');
-  }
-  if (b === 0) {
-    throw new Error('Division by zero is not allowed');
-  }
-  return a / b;
-}
-```
+Open the extension popup. If AI is still initialising, the popup falls back to local heuristics, but you can confirm readiness by checking the DevTools panel (`Chrome Menu > More Tools > Developer Tools > DevMentor AI`) which surfaces AI status.
 
 ---
 
-## 🐙 GitHub Integration (NEW!)
+## 5. Usage Guide
 
-DevMentor AI now includes an **enterprise-grade GitHub API integration** module with professional features:
+### Popup
 
-### Features
+1. Paste code into the main input or select code on a supported page and click **Analyze**.  
+2. Choose a function (Explain, Bugs, Docs, Optimize, Review).  
+3. Results appear either within the page sidebar (if injection succeeded) or in the console/popup if messaging fails.  
+4. Use the **Storytelling** tab to turn the last analyzed snippet into an educational narrative.  
+5. Explore **Gamification** to monitor XP, levels, streaks, and badges.
 
-- 🚀 **Repository Information** - Get comprehensive repo data
-- 🔍 **Code Similarity Search** - Find similar code across GitHub
-- 📊 **Popular Patterns** - Analyze trending code patterns
-- 📁 **File Contents** - Fetch specific files from repositories
-- ⚡ **LRU Cache + TTL** - 99.6% faster responses with intelligent caching
-- 🔄 **Retry Logic** - Exponential backoff for failed requests
-- 📈 **Rate Limiting** - Automatic tracking (60 req/h free, 5000 req/h authenticated)
-- 🔒 **Token Management** - Secure encrypted storage
-- 📊 **Performance Metrics** - Built-in analytics and monitoring
+### Sidebar
 
-### Quick Start
+- Automatically injected on supported domains.  
+- Displays analysis, allows min/max, supports keyboard shortcuts (see DevTools panel for mappings).  
+- Provides quick actions for copying or expanding results.
 
-```javascript
-// Import the module
-import githubIntegration from './background/modules/github-integration.js';
+### DevTools Panel
 
-// Get repository information
-const repo = await githubIntegration.getRepositoryInfo('facebook/react');
-console.log(`${repo.fullName} has ${repo.stars} stars!`);
+- Shows live AI capability status, privacy counters (network requests, bytes sent), storage usage, and quick actions (clear storage, export, reset).  
+- Tabs: Analysis history, privacy dashboard, metrics, settings.
 
-// Find similar code
-const similar = await githubIntegration.getCodeSimilarity(
-  'function debounce(fn, delay) { ... }',
-  { language: 'javascript', maxResults: 5 }
-);
+### GitHub Integration
 
-// Analyze popular patterns
-const patterns = await githubIntegration.getPopularPatterns('javascript', {
-  minStars: 1000,
-  topic: 'react'
-});
-```
-
-### Integration Guide
-
-See our comprehensive documentation:
-- **[GitHub Integration API Reference](./devmentor-ai/background/modules/GITHUB_INTEGRATION.md)** - Complete API documentation
-- **[30-Minute Integration Guide](./INTEGRATION_GUIDE_DEVMENTOR.md)** - Step-by-step setup
-- **[GitHub Integration Summary](./GITHUB_INTEGRATION_SUMMARY.md)** - Executive overview
-- **[Examples & Use Cases](./devmentor-ai/background/modules/github-integration.examples.js)** - 10 working examples
-
-### Performance
-
-- **92% Test Coverage** - Comprehensive test suite
-- **99.6% Faster** - With LRU cache enabled
-- **Grade A+ (96/100)** - Enterprise-grade code quality
-- **MV3 Compatible** - Full Manifest V3 support
-
-### Setup GitHub Token (Optional)
-
-```javascript
-// Increases rate limit from 60 to 5000 req/hour
-await githubIntegration.setToken('ghp_YOUR_TOKEN_HERE');
-
-// Check new rate limit
-const status = await githubIntegration.getRateLimitStatus();
-console.log(`New limit: ${status.limit} requests/hour`);
-```
-
-Get your token from: https://github.com/settings/tokens
+- Configure the GitHub token via popup settings to unlock higher rate limits.  
+- Features include repository analysis, trend detection, code search, and dependency insights.  
+- Calls are routed directly to GitHub; tokens never leave the browser.
 
 ---
 
-## 🏗️ Architecture
+## 6. Development Workflow
 
-DevMentor AI uses a sophisticated **Hybrid Architecture** that combines Chrome Built-in AI (core) with optional premium enhancements.
+| Task | Command |
+|------|---------|
+| Install popup dependencies | `cd frontend-custom && npm install` |
+| Start popup in dev mode | `npm run dev` (serves at `http://localhost:5173`) |
+| Build popup assets | `npm run build` |
+| ESLint (popup) | `npm run lint` |
+| Run unit tests (extension) | `npm test` from repository root |
 
-### System Architecture
+During development:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Service Worker                          │
-│                  (service-worker.js)                        │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Core Modules                               │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  Chrome Built-in AI Integration                     │  │
-│  │  - Prompt API    - Summarization API               │  │
-│  │  - Write API     - Rewrite API                     │  │
-│  └─────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  GitHub Integration (Enterprise-Grade)              │  │
-│  │  - Repository API   - Code Search API              │  │
-│  │  - LRU Cache + TTL  - Rate Limiting                │  │
-│  │  - Retry Logic      - Token Management             │  │
-│  └─────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  Enterprise Intelligence Engine                     │  │
-│  │  - AI Session Manager                              │  │
-│  │  - Context Menu Manager                            │  │
-│  │  - Storage Manager                                 │  │
-│  └─────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Key Components
-
-1. **ChromeBuiltInAIIntegration** ([chrome-builtin-ai-integration.js](devmentor-ai/background/modules/chrome-builtin-ai-integration.js))
-   - Implements all 4 Chrome Built-in AI APIs
-   - Circuit breakers for fault tolerance
-   - Timeout protection
-   - Session management
-
-2. **GitHubIntegration** ([github-integration.js](devmentor-ai/background/modules/github-integration.js)) ⭐ NEW
-   - Enterprise-grade GitHub API integration
-   - LRU Cache with TTL support
-   - Rate limiting and retry logic
-   - Professional logging system
-   - 92% test coverage
-
-3. **EnterpriseIntelligenceEngine** ([enterprise-intelligence-engine.js](devmentor-ai/background/modules/enterprise-intelligence-engine.js))
-   - Orchestrates all AI operations
-   - Manages session state
-   - Handles fallback scenarios
-
-4. **Service Worker** ([service-worker.js](devmentor-ai/background/service-worker.js))
-   - Message routing
-   - Event handling
-   - State management
-
-### Data Flow
-
-```
-User Action → Content Script → Service Worker → AI Processing
-                                                      ↓
-                                          Chrome Built-in AI (Local)
-                                                      ↓
-                                          GitHub API (Optional)
-                                                      ↓
-                                          Response Processing
-                                                      ↓
-                                          Return to User
-```
+1. Run `npm run dev` inside `frontend-custom` to iterate UI components with hot reload.  
+2. After changes, build the assets (`npm run build`).  
+3. Reload the extension via `chrome://extensions/` â†’ `Reload` button to pick up new bundles.
 
 ---
 
-## 🎓 Chrome Built-in AI APIs
+## 7. Repository Structure
 
-DevMentor AI showcases **all four** Chrome Built-in AI APIs:
-
-### 1. Prompt API (Gemini Nano)
-
-**Used for:** Code explanation, debugging, code review
-
-```javascript
-const model = await window.ai.languageModel.create();
-const result = await model.prompt('Explain this code...');
-```
-
-**Features:**
-- Streaming responses
-- Context window: 4096 tokens
-- Temperature control
-- Top-K sampling
-
-### 2. Summarization API
-
-**Used for:** Quick code overviews, concept extraction
-
-```javascript
-const summarizer = await window.ai.summarizer.create({
-  type: 'key-points',
-  length: 'short'
-});
-const summary = await summarizer.summarize(code);
-```
-
-**Options:**
-- Type: `key-points`, `tl;dr`, `headline`
-- Length: `short`, `medium`, `long`
-
-### 3. Write API
-
-**Used for:** Documentation generation, code comments
-
-```javascript
-const writer = await window.ai.writer.create({
-  tone: 'formal',
-  format: 'markdown',
-  length: 'medium'
-});
-const docs = await writer.write('Generate docs for...');
-```
-
-**Capabilities:**
-- Multiple tones (formal, casual, neutral)
-- Format control (markdown, plain, HTML)
-- Length adjustment
-
-### 4. Rewrite API
-
-**Used for:** Code refactoring, optimization suggestions
-
-```javascript
-const rewriter = await window.ai.rewriter.create({
-  tone: 'as-is',
-  format: 'as-is',
-  length: 'as-is'
-});
-const refactored = await rewriter.rewrite(code, {
-  context: 'Improve readability and performance'
-});
-```
-
-**Options:**
-- Preserve structure or rewrite
-- Style adjustments
-- Context-aware rewriting
+| Path | Description |
+|------|-------------|
+| `background/` | Service worker and AI modules orchestrating extension behaviour |
+| `content/` | Content scripts, sidebar host, MAIN-world bridge |
+| `frontend-custom/` | React/Vite source for popup/options UI |
+| `devtools/` | DevTools integration assets |
+| `utils/` | Shared analytics, telemetry, helper utilities |
+| `tests/` | Unit and behavioural tests |
+| `scripts/` | Build integration scripts (copying assets, HTML path fixes) |
 
 ---
 
-## 🧪 Testing
+## 8. Privacy & Security
 
-We provide comprehensive test suites for all components:
-
-### GitHub Integration Tests
-
-```bash
-# Run GitHub Integration tests
-npm test -- github-integration.test.js
-```
-
-**Test Coverage:**
-- ✅ 92% code coverage
-- ✅ 45 unit tests
-- ✅ All API methods tested
-- ✅ Error handling verified
-- ✅ Rate limiting validated
-- ✅ Cache performance measured
-
-### Chrome Built-in AI Tests
-
-1. Open test page: `chrome-extension://<YOUR-EXTENSION-ID>/test-hybrid-architecture.html`
-2. Click **"Run Complete Test Suite"**
-3. Verify all tests pass
-
-### Manual Testing
-
-See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for detailed testing instructions.
-
-### Complete Test Coverage
-
-- ✅ System initialization
-- ✅ All 4 Chrome Built-in AI APIs
-- ✅ GitHub API integration
-- ✅ Code explanation (simple and complex)
-- ✅ Bug detection
-- ✅ Documentation generation
-- ✅ Code refactoring
-- ✅ Educational features
-- ✅ Performance benchmarks
-- ✅ Error handling
-- ✅ Offline functionality
+- **No remote processing.** All AI calls target the local Chrome Built-in AI implementation; the fallback engine runs locally.  
+- **Opt-in integrations.** GitHub or other APIs activate only when configured by the user. Tokens are stored using `chrome.storage.local`, encrypted by Chrome.  
+- **Telemetry transparency.** DevTools privacy dashboard exposes counters for outbound requests, data volume, and processing location.  
+- **Content Security Policy.** Extension pages and service worker enforce MV3 CSP restrictions; no `eval`, inline script injection, or remote script loading is performed.
 
 ---
 
-## 📊 Performance
+## 9. Troubleshooting
 
-### Benchmarks
-
-| Operation | Average Time | API Used | Status |
-|-----------|-------------|----------|--------|
-| Simple Code Explanation | 500-1000ms | Prompt API | ✅ |
-| Complex Code Explanation | 1000-2000ms | Prompt API | ✅ |
-| Documentation Generation | 800-1500ms | Write API | ✅ |
-| Code Refactoring | 1000-2000ms | Rewrite API | ✅ |
-| Bug Detection | 1000-1800ms | Prompt API | ✅ |
-| Quick Summary | 300-600ms | Summarization API | ✅ |
-| GitHub API Call (cached) | 1-5ms | GitHub API | ✅ |
-| GitHub API Call (fresh) | 200-800ms | GitHub API | ✅ |
-
-### Comparison: External API vs Chrome Built-in AI
-
-| Metric | External API | Chrome Built-in AI |
-|--------|-------------|-------------------|
-| Response Time | 2-5 seconds | 0.5-2 seconds |
-| Offline Support | ❌ No | ✅ Yes |
-| Privacy | ⚠️ Data sent externally | ✅ 100% on-device |
-| Cost per Request | $0.001-0.01 | $0 (FREE!) |
-| Internet Required | ✅ Yes | ❌ No |
-| Rate Limits | ✅ Yes (strict) | ❌ No |
+| Symptom | Resolution |
+|---------|------------|
+| Popup stuck on â€œinitialisingâ€ | Ensure Chrome 130+, flags enabled, and Gemini Nano downloaded. The popup automatically falls back, but DevTools > DevMentor AI shows readiness details. |
+| â€œCould not establish connection. Receiving end does not exist.â€ | Content script not injected on current domain. Use the popup input directly or switch to a supported domain. |
+| GitHub rate limiting | Add a personal access token in **Settings â†’ Integrations** within the popup. |
+| Sidebar not appearing | Page may block script injection. Use the popup or DevTools panel instead; analysis results are still delivered via fallback logging. |
+| Want to disable analytics | Use DevTools â†’ Settings tab to export/clear storage; no remote analytics exist. |
 
 ---
 
-## 🔒 Privacy & Security
+## 10. Testing Strategy
 
-### Privacy-First Design
-
-- ✅ **100% On-Device Processing** - All AI inference happens locally
-- ✅ **No Data Collection** - We don't collect, store, or transmit your code
-- ✅ **No External API Calls** - Core features work without internet
-- ✅ **No Tracking** - No analytics, no telemetry
-- ✅ **Open Source** - Audit the code yourself
-- ✅ **Encrypted Token Storage** - GitHub tokens stored securely in Chrome storage
-
-### Security Features
-
-- Content Security Policy (CSP) enforcement
-- Manifest V3 compliance
-- Minimum permissions required
-- No `eval()` or unsafe code execution
-- Regular security audits
-- Input validation on all API endpoints
-- Safe error handling (no sensitive data in errors)
+- `npm test` (root) runs unit and integration harnesses covering core background logic.  
+- Additional scripted flows reside in `tests/` and focus on AI request handling, storage cleanup, and GitHub integration behaviour.  
+- When working on popup UI, rely on component-level testing within the Vite project and manual validation via Chromeâ€™s extension reloader.
 
 ---
 
-## 💰 Pricing
+## 11. Roadmap
 
-### FREE (Chrome Built-in AI)
-
-**$0/month**
-
-- ✅ 1000 explanations/day (effectively unlimited)
-- ✅ All core features
-- ✅ Deep code analysis
-- ✅ Educational mode
-- ✅ Bug detection
-- ✅ Documentation generation
-- ✅ Code refactoring
-- ✅ GitHub integration (60 req/h)
-- ✅ Works offline
-- ✅ 100% private
-
-### PRO
-
-**$9.99/month**
-
-- ✅ Everything in FREE
-- ✅ Unlimited requests
-- ✅ Enhanced with Gemini Pro
-- ✅ AI video lessons
-- ✅ Interactive diagrams
-- ✅ Personalized quizzes
-- ✅ Academic citations
-- ✅ Learning analytics
-- ✅ GitHub integration (authenticated, 5000 req/h)
-- ✅ Priority support
-
-### ENTERPRISE
-
-**$29.99/month**
-
-- ✅ Everything in PRO
-- ✅ Team collaboration
-- ✅ Advanced analytics
-- ✅ Custom integrations
-- ✅ SSO support
-- ✅ Dedicated support
-- ✅ SLA guarantee
+- Optional Gemini Pro cloud handoff for users who opt-in.  
+- Expanded static analysis rules for additional languages.  
+- Team sharing of analysis results via secure sync.  
+- Automatic import of project context from local repositories.
 
 ---
 
-## 🛠️ Development
+## 12. License
 
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/v1olegrace/DevMentorIA.git
-cd DevMentorIA/devmentor-ai
-
-# No build step required - pure JavaScript!
-```
-
-### Project Structure
-
-```
-devmentor-ai/
-├── background/
-│   ├── modules/
-│   │   ├── github-integration.js           # GitHub API (NEW!)
-│   │   ├── github-integration.examples.js  # Usage examples
-│   │   ├── cache.js                        # LRU Cache with TTL
-│   │   ├── logger.js                       # Enterprise logging
-│   │   ├── chrome-builtin-ai-integration.js # Core Chrome AI
-│   │   ├── enterprise-intelligence-engine.js # AI Orchestrator
-│   │   ├── ai-session-manager.js            # Session management
-│   │   ├── context-menu.js                  # Context menus
-│   │   ├── storage.js                       # Storage utilities
-│   │   └── GITHUB_INTEGRATION.md            # API documentation
-│   └── service-worker.js                    # Service Worker
-├── content/
-│   ├── code-detector.js                     # Code detection
-│   └── highlighter.css                      # Syntax highlighting
-├── utils/
-│   ├── api-client.js                        # HTTP client
-│   ├── security-fixes.js                    # Security utilities
-│   └── logger.js                            # Utility logger
-├── tests/
-│   └── unit/
-│       └── github-integration.test.js       # GitHub tests (92% coverage)
-├── assets/
-│   └── icons/                               # Extension icons
-├── manifest.json                            # Extension config (MV3)
-├── README.md                                # This file
-├── GITHUB_INTEGRATION_SUMMARY.md            # GitHub integration overview
-├── INTEGRATION_GUIDE_DEVMENTOR.md           # Integration guide (30 min)
-├── TESTING_GUIDE.md                         # Testing instructions
-└── HACKATHON_SUBMISSION_CHECKLIST.md        # Submission guide
-```
-
-### Code Quality
-
-- ✅ **Grade A+ (96/100)** - Enterprise-grade code quality
-- ✅ **92% Test Coverage** - Comprehensive test suite
-- ✅ **Manifest V3 Compatible** - Modern Chrome extension standards
-- ✅ **ES6 Modules** - Clean, modular architecture
-- ✅ **Professional Logging** - Enterprise-grade logging system
-- ✅ **Error Handling** - Comprehensive error handling
-- ✅ **Memory Safe** - No memory leaks, proper cleanup
-- ✅ **Performance Optimized** - LRU caching, rate limiting
+This project is licensed under the [MIT License](./LICENSE).
 
 ---
 
-## 📚 Documentation
+## 13. Contributing
 
-### Core Documentation
-- **[README.md](./README.md)** - You are here!
-- **[Testing Guide](./TESTING_GUIDE.md)** - Comprehensive testing instructions
-- **[Hackathon Checklist](./HACKATHON_SUBMISSION_CHECKLIST.md)** - Submission guide
-
-### GitHub Integration Documentation
-- **[API Reference](./devmentor-ai/background/modules/GITHUB_INTEGRATION.md)** - Complete API docs
-- **[Integration Guide](./INTEGRATION_GUIDE_DEVMENTOR.md)** - 30-minute setup guide
-- **[Summary](./GITHUB_INTEGRATION_SUMMARY.md)** - Executive overview
-- **[Index](./GITHUB_INTEGRATION_INDEX.md)** - Navigation guide
-- **[Examples](./devmentor-ai/background/modules/github-integration.examples.js)** - 10 working examples
-
-### External Resources
-- **[Chrome Built-in AI Docs](https://developer.chrome.com/docs/ai/built-in)** - Official API documentation
-- **[GitHub API v3 Docs](https://docs.github.com/en/rest)** - GitHub REST API reference
-
----
-
-## 🎬 Demo
-
-📹 **Demo Video Coming Soon**
-
-**Video will showcase:**
-- Extension installation and setup
-- Live demo of all 4 Chrome Built-in AI APIs
-- GitHub Integration showcase
-- Educational features demonstration
-- Privacy and offline capabilities
-- Performance benchmarks
-
----
-
-## 🏆 Hackathon
-
-This project was built for the **Chrome Built-in AI Challenge 2025**.
-
-### Hackathon Highlights
-
-- ✅ Uses **ALL 4** Chrome Built-in AI APIs
-- ✅ **Enterprise-Grade GitHub Integration** (NEW!)
-- ✅ Solves real developer pain points
-- ✅ Production-ready code quality (A+ grade)
-- ✅ 92% test coverage
-- ✅ Enterprise-grade architecture
-- ✅ Clear monetization path
-- ✅ Privacy-first approach
-- ✅ Educational focus
-- ✅ Manifest V3 compliant
-
-### Technical Achievements
-
-| Achievement | Status | Details |
-|-------------|--------|---------|
-| Chrome Built-in AI APIs | ✅ 4/4 | Prompt, Summarization, Write, Rewrite |
-| GitHub API Integration | ✅ Complete | Enterprise-grade with caching |
-| Test Coverage | ✅ 92% | Comprehensive unit tests |
-| Code Quality | ✅ A+ (96/100) | Professional standards |
-| Documentation | ✅ Complete | 5,000+ lines of docs |
-| MV3 Compatibility | ✅ Yes | Modern Chrome extension |
-| Performance | ✅ Optimized | Sub-2-second responses |
-| Security | ✅ Audited | Privacy-first design |
-
----
-
-## 🤝 Support
-
-### Getting Help
-
-- 📖 [Documentation](#-documentation)
-- 🧪 [Testing Guide](./TESTING_GUIDE.md)
-- 🐙 [GitHub Integration Guide](./INTEGRATION_GUIDE_DEVMENTOR.md)
-- 🐛 [Report Issues](https://github.com/v1olegrace/DevMentorIA/issues)
-
-### FAQ
-
-**Q: Why isn't Chrome Built-in AI working?**
-A: Ensure you're using Chrome 130+, have enabled the required flags at `chrome://flags`, and have waited for Gemini Nano to download (5-10 minutes after enabling flags).
-
-**Q: Does this work offline?**
-A: Yes! After the initial Gemini Nano model download, all core features work completely offline. GitHub integration requires internet but has intelligent caching.
-
-**Q: Is my code sent to external servers?**
-A: No! All AI processing happens on-device using Chrome's Built-in AI. Your code never leaves your machine. GitHub integration only calls GitHub's public API when explicitly used.
-
-**Q: What's the difference between FREE and PRO?**
-A: FREE tier uses Chrome Built-in AI (Gemini Nano) on-device with 60 GitHub API requests/hour. PRO tier adds Gemini Pro enhancements, premium features, and 5000 GitHub API requests/hour.
-
-**Q: How do I get a GitHub token?**
-A: Visit https://github.com/settings/tokens, create a personal access token, and add it in the extension settings. This increases your rate limit from 60 to 5000 requests/hour.
-
-**Q: Is the GitHub Integration secure?**
-A: Yes! Tokens are encrypted and stored locally in Chrome's secure storage. All API calls go directly to GitHub with proper authentication headers. No third-party servers involved.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-## 🙏 Acknowledgments
-
-- Chrome team for building amazing Built-in AI APIs
-- Gemini Nano for powering the on-device AI
-- GitHub for their excellent REST API
-- All contributors and testers
-- Open source community for inspiration
-
----
-
-## 🌟 Star History
-
-If you find DevMentor AI helpful, please consider giving us a star on GitHub! ⭐
+Contributions are welcome. Fork the repository, open a pull request with detailed rationale, and include test coverage or manual validation steps. For feature requests or bugs, use [GitHub Issues](https://github.com/v1olegrace/DevMentorIA/issues).
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for developers, by developers**
-
-**Powered by Chrome Built-in AI (Gemini Nano) + GitHub API**
-
-**Enterprise-Grade • Privacy-First • 100% Open Source**
-
-[⬆ Back to Top](#-devmentor-ai---your-personal-code-learning-assistant)
+**Designed, engineered, and documented to run entirely at the edge.**
 
 </div>
+
+

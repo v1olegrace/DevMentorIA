@@ -16,6 +16,7 @@ const LearningCenter = () => {
           const Icon = option.icon;
           return (
             <button
+              type="button"
               key={option.id}
               className="flex flex-col items-center gap-2 p-3 bg-card border border-border rounded-xl hover:border-primary/20 hover:shadow-soft transition-all duration-200 hover:scale-[1.02]"
             >

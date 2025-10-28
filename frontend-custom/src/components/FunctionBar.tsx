@@ -25,6 +25,7 @@ const FunctionBar = ({ selectedFunction, onFunctionChange }: FunctionBarProps) =
           
           return (
             <button
+              type="button"
               key={func.id}
               onClick={() => onFunctionChange(func.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${

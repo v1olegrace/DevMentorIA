@@ -315,3 +315,8 @@ privacyTracker.startMonitoring().catch(console.error);
 privacyTracker.loadStoredStats().catch(console.error);
 
 export default privacyTracker;
+
+
+
+
+

@@ -219,3 +219,5 @@ window.addEventListener('load', () => {
   checkStorageSize();
   setInterval(checkStorageSize, 5000);
 });
+
+

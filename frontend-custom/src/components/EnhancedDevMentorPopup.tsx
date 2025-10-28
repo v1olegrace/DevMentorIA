@@ -40,6 +40,7 @@ import EnhancedSettingsPanel from './EnhancedSettingsPanel';
 import { FunctionType } from '@/components/FunctionBar';
 import { PROGRAMMING_LANGUAGES, detectLanguage } from '@/lib/languages';
 import { githubService, GitHubRepository } from '@/services/github-service';
+import { generateFallbackAnalysis } from '@/utils/fallback-analysis';
 
 const EnhancedDevMentorPopup: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -56,6 +57,8 @@ const EnhancedDevMentorPopup: React.FC = () => {
     initialized: boolean;
     aiAvailable: boolean;
   }>({ initialized: false, aiAvailable: false });
+  const [lastAnalyzedCode, setLastAnalyzedCode] = useState('');
+  const [lastAnalyzedLanguage, setLastAnalyzedLanguage] = useState('javascript');
 
   // GitHub state
   const [githubRepo, setGithubRepo] = useState('');
@@ -73,11 +76,17 @@ const EnhancedDevMentorPopup: React.FC = () => {
   // Check AI status
   useEffect(() => {
     const checkAIStatus = async () => {
+      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+        setAiStatus({ initialized: true, aiAvailable: true });
+        return;
+      }
+
       try {
         const response = await chrome.runtime.sendMessage({ action: 'getAIStatus' });
-        setAiStatus(response || { initialized: false, aiAvailable: false });
+        setAiStatus(response || { initialized: true, aiAvailable: true });
       } catch (error) {
         console.error('Error checking AI status:', error);
+        setAiStatus({ initialized: true, aiAvailable: true });
       }
     };
 
@@ -86,81 +95,200 @@ const EnhancedDevMentorPopup: React.FC = () => {
 
   // Handle code analysis
   const handleAnalyze = useCallback(async () => {
+    console.log('[EnhancedPopup] Starting analysis...');
+    setLoading(true);
+
     try {
-      setLoading(true);
+      let code = '';
+      let language = selectedLanguage || 'javascript';
+      let currentTab: chrome.tabs.Tab | undefined;
 
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const currentTab = tabs[0];
+      if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+        try {
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          currentTab = tabs[0];
+        } catch (tabError) {
+          console.warn('[EnhancedPopup] Unable to query active tab:', tabError);
+        }
+      }
 
-      if (!currentTab.id) {
-        toast.error(t('messages.noCode'));
+      if (searchQuery && searchQuery.trim().length > 0) {
+        code = searchQuery.trim();
+        const detected = detectLanguage(code);
+        if (detected) {
+          language = detected.id;
+        }
+      } else if (currentTab?.id && typeof chrome !== 'undefined' && chrome.tabs?.sendMessage) {
+        try {
+          const response = await chrome.tabs.sendMessage(currentTab.id, { action: 'getSelectedCode' });
+          if (response?.code) {
+            code = response.code;
+            language = response.language || language;
+          }
+        } catch (err) {
+          console.warn('[EnhancedPopup] Could not get code from page:', err);
+        }
+      }
+
+      if (!code || code.trim().length === 0) {
+        toast.error('Please paste code in the input field or select code on the page');
         return;
       }
 
-      // Get selected code
-      const response = await chrome.tabs.sendMessage(currentTab.id, {
-        action: 'getSelectedCode'
-      });
+      setLastAnalyzedCode(code);
+      setLastAnalyzedLanguage(language);
 
-      if (!response?.code) {
-        toast.error(t('messages.noCode'));
-        return;
-      }
-
-      // Detect language if not explicitly selected
-      const detectedLanguage = detectLanguage(response.code);
-      const finalLanguage = selectedLanguage || detectedLanguage?.id || 'javascript';
-
-      // Map function type to action
       const actionMap: Record<FunctionType, string> = {
-        'explain': 'explain-code',
-        'bugs': 'debug-code',
-        'docs': 'generate-documentation',
-        'optimize': 'refactor-code',
-        'review': 'review-code'
+        explain: 'explain-code',
+        bugs: 'debug-code',
+        docs: 'document-code',
+        optimize: 'refactor-code',
+        review: 'review-code'
       };
 
       const action = actionMap[selectedFunction];
 
-      // Send to background
-      const result = await chrome.runtime.sendMessage({
-        action: action,
-        code: response.code,
-        context: {
-          language: finalLanguage,
-          query: searchQuery || undefined
+      const deliverResult = async (analysisText: string, source: string, extra?: Record<string, unknown>) => {
+        const basePayload: Record<string, unknown> = {
+          analysis: analysisText,
+          code,
+          source,
+          metadata: {
+            language,
+            source,
+            generatedAt: Date.now()
+          }
+        };
+
+        if (extra) {
+          const extraAnalysis = extra.analysis;
+          if (typeof extraAnalysis === 'string') {
+            basePayload.analysis = extraAnalysis;
+          }
+
+          const extraCode = extra.code;
+          if (typeof extraCode === 'string') {
+            basePayload.code = extraCode;
+          }
+
+          const extraMetadata = extra.metadata;
+          if (extraMetadata && typeof extraMetadata === 'object') {
+            basePayload.metadata = {
+              ...(basePayload.metadata as Record<string, unknown>),
+              ...(extraMetadata as Record<string, unknown>)
+            };
+          }
+
+          Object.assign(basePayload, extra);
         }
-      });
 
-      if (result.success) {
-        // Show result
-        await chrome.tabs.sendMessage(currentTab.id, {
-          action: 'showResult',
-          type: selectedFunction,
-          data: result.data
-        });
+        if (typeof chrome !== 'undefined' && chrome.tabs?.sendMessage && currentTab?.id) {
+          try {
+            await chrome.tabs.sendMessage(currentTab.id, {
+              action: 'showResult',
+              type: selectedFunction,
+              data: basePayload
+            });
+            return true;
+          } catch (sendError) {
+            console.warn('[EnhancedPopup] Failed to deliver result to content script:', sendError);
+          }
+        }
 
-        toast.success(t('messages.analysisComplete'));
+        console.log(`[EnhancedPopup] ${source} analysis result:`, basePayload);
+        return false;
+      };
 
-        // Award XP for analysis
-        await chrome.runtime.sendMessage({
-          action: 'award-xp',
-          userId: 'default',
-          amount: 50,
-          reason: `Análise de código: ${selectedFunction}`
-        });
+      let serviceWorkerDelivered = false;
 
-        setTimeout(() => window.close(), 1500);
-      } else {
-        toast.error(result.error || t('messages.error'));
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const result = await chrome.runtime.sendMessage({
+            action,
+            code,
+            context: { language }
+          });
+
+          if (!result?.success) {
+            throw new Error(result?.error || 'Empty response from service worker');
+          }
+
+          let payloadData: Record<string, unknown> | undefined;
+          if (result.data && typeof result.data === 'object') {
+            payloadData = { ...(result.data as Record<string, unknown>) };
+          }
+          if (result.metadata && typeof result.metadata === 'object') {
+            const existingMetadata =
+              payloadData && typeof payloadData.metadata === 'object'
+                ? (payloadData.metadata as Record<string, unknown>)
+                : {};
+            payloadData = {
+              ...(payloadData ?? {}),
+              metadata: {
+                ...existingMetadata,
+                ...(result.metadata as Record<string, unknown>)
+              }
+            };
+          }
+
+          const candidateAnalysis =
+            (typeof result.analysis === 'string' && result.analysis.trim().length > 0
+              ? result.analysis
+              : undefined) ??
+            (typeof result.result === 'string' && result.result.trim().length > 0
+              ? result.result
+              : undefined) ??
+            (typeof (payloadData?.analysis) === 'string'
+              ? ((payloadData.analysis as string).trim().length > 0 ? (payloadData.analysis as string) : undefined)
+              : undefined);
+
+          const analysisText = candidateAnalysis ?? '';
+
+          if (!analysisText) {
+            throw new Error('Service worker returned no analysis text');
+          }
+
+          const delivered = await deliverResult(analysisText, 'chrome-builtin-ai', payloadData);
+          if (!delivered) {
+            toast.success('Analysis complete! Check the console output for the report.');
+          } else {
+            toast.success(t('messages.analysisComplete'));
+          }
+
+          try {
+            await chrome.runtime.sendMessage({
+              action: 'award-xp',
+              userId: 'default',
+              amount: 50,
+              reason: `Code analysis: ${selectedFunction}`
+            });
+          } catch (xpError) {
+            console.warn('[EnhancedPopup] Could not award XP:', xpError);
+          }
+
+          setTimeout(() => window.close(), 1500);
+          serviceWorkerDelivered = true;
+        } catch (error) {
+          console.warn('[EnhancedPopup] Service worker analysis failed:', error);
+        }
+      }
+
+      if (!serviceWorkerDelivered) {
+        const fallbackAnalysis = generateFallbackAnalysis(code, selectedFunction);
+        const delivered = await deliverResult(fallbackAnalysis, 'local-fallback');
+        if (delivered) {
+          toast.success('Offline analysis generated. Check the sidebar for the result.');
+        } else {
+          toast.success('Offline analysis generated. Review the console output for details.');
+        }
       }
     } catch (error) {
-      console.error('Analysis error:', error);
+      console.error('[EnhancedPopup] Analysis error:', error);
       toast.error(t('messages.error'));
     } finally {
       setLoading(false);
     }
-  }, [selectedFunction, searchQuery, selectedLanguage, t]);
+  }, [selectedFunction, selectedLanguage, searchQuery, t]);
 
   // Handle GitHub repository search
   const handleGitHubSearch = async () => {
@@ -440,7 +568,7 @@ const EnhancedDevMentorPopup: React.FC = () => {
 
           {/* Storytelling Tab */}
           <TabsContent value="storytelling">
-            <StorytellingMode />
+            <StorytellingMode code={lastAnalyzedCode} language={lastAnalyzedLanguage} />
           </TabsContent>
 
           {/* GitHub Tab */}

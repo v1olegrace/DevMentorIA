@@ -386,9 +386,9 @@ class GitHubAPI {
 // Export singleton instance
 const githubAPI = new GitHubAPI();
 
-// Initialize rate limit check on creation
-githubAPI.checkRateLimit().catch(() => {
-  console.warn('[GitHubAPI] Initial rate limit check failed');
-});
-
 export default githubAPI;
+
+
+
+
+
